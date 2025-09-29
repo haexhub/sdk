@@ -8,4 +8,6 @@ export default defineConfig({
   sourcemap: true,
   clean: true, // Clean output directory before building
   outDir: "dist",
+  treeshake: true,
+  minify: false,
 });

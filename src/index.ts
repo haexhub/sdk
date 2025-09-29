@@ -1,9 +1,30 @@
-/**
- * HaexHub SDK
- *
- * This is the main entry point for the SDK.
- * It exports the main client and all relevant types.
- */
+export { HaexHubClient } from "./client";
+export { DatabaseAPI } from "./api/database";
 
-export * from "./client";
-export * from "./types";
+export type {
+  HaexHubRequest,
+  HaexHubResponse,
+  HaexHubError,
+  HaexHubConfig,
+  HaexHubEvent,
+  EventCallback,
+  PermissionResponse,
+  DatabasePermission,
+  DatabasePermissionRequest,
+  DatabaseQueryParams,
+  DatabaseQueryResult,
+  DatabaseExecuteParams,
+  DatabaseTableInfo,
+  DatabaseColumnInfo,
+  ExtensionInfo,
+} from "./types";
+
+export { PermissionStatus, ErrorCode } from "./types";
+
+import { HaexHubClient } from "./client";
+
+export function createHaexHubClient(
+  config: { debug?: boolean; timeout?: number } = {}
+) {
+  return new HaexHubClient(config);
+}

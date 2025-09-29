@@ -1,27 +1,108 @@
-/**
- * Configuration options for the HaexHubClient.
- * (Currently empty, but can be expanded later).
- */
-export interface ClientOptions {}
-
-/**
- * Represents a generic project within HaexHub.
- * This is a sample type and should be adjusted to match your actual data model.
- */
-export interface Project {
-  id: string;
-  name: string;
-  path: string;
-  createdAt: string; // ISO 8601 date string
-  lastAccessedAt?: string; // ISO 8601 date string
+// Core Protocol Types
+export interface HaexHubRequest {
+  method: string;
+  params: Record<string, unknown>;
+  timestamp: number;
 }
 
-/**
- * Options for listing records from the database.
- */
-export interface DatabaseListOptions {
-  /**
-   * If provided, only records whose keys start with this string will be returned.
-   */
-  startsWith?: string;
+export interface HaexHubResponse<T = unknown> {
+  id: string;
+  result?: T;
+  error?: HaexHubError;
+}
+
+export interface HaexHubError {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
+// Extension Info (provided by HaexHub at runtime)
+export interface ExtensionInfo {
+  keyHash: string;
+  name: string;
+  fullId: string;
+  version: string;
+  displayName?: string;
+  namespace?: string;
+}
+
+// Permission Types
+export enum PermissionStatus {
+  GRANTED = "granted",
+  DENIED = "denied",
+  ASK = "ask",
+}
+
+export interface PermissionResponse {
+  status: PermissionStatus;
+  permanent: boolean;
+}
+
+// Database Permission (matches Rust DbExtensionPermission)
+export interface DatabasePermission {
+  extensionId: string;
+  resource: string;
+  operation: "read" | "write";
+  path: string;
+}
+
+export interface DatabasePermissionRequest {
+  resource: string;
+  operation: "read" | "write";
+  reason?: string;
+}
+
+// Database Types
+export interface DatabaseQueryParams {
+  query: string;
+  params?: unknown[];
+}
+
+export interface DatabaseQueryResult {
+  rows: unknown[];
+  rowsAffected: number;
+  lastInsertId?: number;
+}
+
+export interface DatabaseExecuteParams {
+  statements: string[];
+}
+
+export interface DatabaseTableInfo {
+  name: string;
+  columns: DatabaseColumnInfo[];
+}
+
+export interface DatabaseColumnInfo {
+  name: string;
+  type: string;
+  notNull: boolean;
+  defaultValue?: unknown;
+  primaryKey: boolean;
+}
+
+// Event Types
+export interface HaexHubEvent {
+  type: string;
+  data: unknown;
+  timestamp: number;
+}
+
+export type EventCallback = (event: HaexHubEvent) => void;
+
+// Config Types
+export interface HaexHubConfig {
+  debug?: boolean;
+  timeout?: number;
+}
+
+// Error Codes
+export enum ErrorCode {
+  PERMISSION_DENIED = "PERMISSION_DENIED",
+  INVALID_PARAMS = "INVALID_PARAMS",
+  METHOD_NOT_FOUND = "METHOD_NOT_FOUND",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+  TIMEOUT = "TIMEOUT",
+  NOT_IN_IFRAME = "NOT_IN_IFRAME",
 }
