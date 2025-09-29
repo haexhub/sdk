@@ -114,14 +114,13 @@ export class HaexHubClient {
   }
 
   public async checkDatabasePermission(
-    resource: string,
-    operation: "read" | "write"
+    request: Omit<DatabasePermissionRequest, "reason">
   ): Promise<boolean> {
     const response = await this.request<PermissionResponse>(
       "permissions.database.check",
       {
-        resource,
-        operation,
+        resource: request.resource,
+        operation: request.operation,
       }
     );
     return response.status === "granted";
