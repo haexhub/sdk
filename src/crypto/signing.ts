@@ -118,7 +118,7 @@ export class ExtensionSigner {
 
     // 3. ZIP erstellen mit archiver
     const finalOutputPath =
-      outputPath || `${manifest.id}-${manifest.version}.haex`;
+      outputPath || `${manifest.id}-${manifest.version}.haextension`;
     const output = fsSync.createWriteStream(finalOutputPath);
     const archive = archiver("zip", {
       zlib: { level: 9 }, // Maximale Kompression

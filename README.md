@@ -419,6 +419,103 @@ if (credentialsTable) {
 }
 ```
 
+## Extension Signing & Packaging
+
+HaexHub Extensions must be cryptographically signed to ensure authenticity and prevent tampering. The SDK provides tools to generate keypairs, sign, and package your extensions.
+
+### 1. Generate a Keypair (One-time Setup)
+
+Before publishing your extension, generate a keypair:
+
+```bash
+npx haexhub keygen
+```
+
+This creates two files:
+
+public.key - Include this in your repository
+private.key - Keep this secret! Add to .gitignore
+
+Important: Never commit your private.key. Anyone with this key can impersonate your extension.
+
+### 2. Add Keys to .gitignore
+
+private.key
+\*.key
+!public.key
+
+### 3. Build and Sign Your Extension
+
+Add scripts to your package.json:
+
+```json
+{
+  "scripts": {
+    "build": "nuxt generate",
+    "package": "haexhub sign dist -k private.key",
+    "build:release": "npm run build && npm run package"
+  },
+  "devDependencies": {
+    "@haexhub/sdk": "^1.0.0"
+  }
+}
+```
+
+Then build and package:
+
+```bash
+npm run build:release
+```
+
+This creates your-extension-1.0.0.haextension - a signed ZIP file ready for distribution.
+
+### 4. What Gets Signed?
+
+The signing process:
+
+1. Computes SHA-256 hash of all files in your extension
+2. Signs the hash with your private key using Ed25519
+3. Adds public_key and signature to your manifest.json
+4. Creates a .haextension file (ZIP archive)
+
+### 5. Manifest Structure
+
+After signing, your manifest will include:
+
+```json
+{
+  "id": "your-extension",
+  "name": "Your Extension",
+  "version": "1.0.0",
+  "public_key": "a3f5b9c2d1e8f4a6b7c3...",
+  "signature": "d4e6f8a1b2c3d4e5f6a7...",
+  "permissions": {
+    "database": {
+      "read": ["*"],
+      "write": ["*"]
+    }
+  }
+}
+```
+
+### 6. Verification
+
+When users install your extension:
+
+1. HaexHub extracts the .haextension file
+2. Verifies the signature using the public_key
+3. Computes the hash and checks it matches
+4. Rejects installation if verification fails
+
+This ensures the extension hasn't been modified since you signed it.
+
+### 7. Key Management Best Practices
+
+- Backup your private key - Store it securely (password manager, encrypted backup)
+- One key per extension - Don't reuse keys across different extensions
+- Rotate keys carefully - Key changes require users to reinstall your extension
+- Lost key = lost extension - You cannot update an extension without the original key
+
 ## Security Features
 
 ### ✅ Cryptographic Identity

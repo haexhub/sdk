@@ -35,7 +35,7 @@ program
   .command("sign <extension-path>")
   .description("Sign and package an extension")
   .option("-k, --key <path>", "Private key file", "./private.key")
-  .option("-o, --output <path>", "Output path for .haex file")
+  .option("-o, --output <path>", "Output path for .haextension file")
   .action(async (extensionPath, options) => {
     try {
       const privateKey = await fs.readFile(options.key, "utf-8");
