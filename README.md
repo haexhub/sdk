@@ -434,15 +434,18 @@ npx haexhub keygen
 This creates two files:
 
 public.key - Include this in your repository
+
 private.key - Keep this secret! Add to .gitignore
 
-Important: Never commit your private.key. Anyone with this key can impersonate your extension.
+**Important**: **Never commit your private.key**. Anyone with this key can impersonate your extension.
 
 ### 2. Add Keys to .gitignore
 
+```gitignore
 private.key
 \*.key
 !public.key
+```
 
 ### 3. Build and Sign Your Extension
 
