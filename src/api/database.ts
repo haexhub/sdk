@@ -1,16 +1,10 @@
 import type { HaexHubClient } from "../client";
-import type {
-  DatabaseQueryParams,
-  DatabaseQueryResult,
-  DatabaseExecuteParams,
-  DatabaseTableInfo,
-  DatabaseColumnInfo,
-} from "../types";
+import type { DatabaseQueryResult, DatabaseTableInfo } from "../types";
 
 export class DatabaseAPI {
   constructor(private client: HaexHubClient) {}
 
-  async query<T = unknown>(query: string, params?: unknown[]): Promise<T[]> {
+  async query<T>(query: string, params?: unknown[]): Promise<T[]> {
     const result = await this.client.request<DatabaseQueryResult>("db.query", {
       query,
       params,

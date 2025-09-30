@@ -1,32 +1,126 @@
 /**
- * Basic usage example for HaexHub SDK
- * This file demonstrates how extension developers would use the SDK
+ * Example: Using Application Context and Search
  */
 
-import { createHaexHubClient, PermissionStatus } from "@haexhub/sdk";
+import { createHaexHubClient } from "@haexhub/sdk";
+import type { SearchRequestEvent, ApplicationContext } from "@haexhub/sdk";
 
-// Initialize the client
-const client = createHaexHubClient("demo-extension", true);
+const client = createHaexHubClient({ debug: true });
 
-async function main() {
-  try {
-    // 1. Request permissions
-    console.log("Requesting database permissions...");
-    const permissionResponse = await client.requestPermission({
-      permission: "db.write",
-      resource: "notes",
-      reason: "To store user notes",
-    });
+// ==========================================
+// 1. Access Application Context
+// ==========================================
 
-    if (permissionResponse.status !== PermissionStatus.GRANTED) {
-      console.error("Permission denied!");
-      return;
+async function setupTheme() {
+  // Wait for initialization
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Get current context
+  const context = client.context;
+
+  if (context) {
+    console.log("Current theme:", context.theme); // 'light' | 'dark' | 'system'
+    console.log("Current locale:", context.locale); // 'en', 'de', etc.
+    console.log("Platform:", context.platform); // 'desktop' | 'mobile' | 'tablet'
+
+    // Apply theme to extension UI
+    if (context.theme === "dark") {
+      document.body.classList.add("dark-theme");
+    } else {
+      document.body.classList.remove("dark-theme");
     }
 
-    // 2. Create a table
-    console.log("Creating notes table...");
-    await client.db.createTable(
-      "notes",
+    // Use locale for translations
+    loadTranslations(context.locale);
+  }
+}
+
+// ==========================================
+// 2. Listen to Context Changes
+// ==========================================
+
+client.on("context.changed", (event) => {
+  const context = (event as any).data.context as ApplicationContext;
+
+  console.log("Context changed:", context);
+
+  // Update theme when user changes it
+  if (context.theme === "dark") {
+    document.body.classList.add("dark-theme");
+  } else {
+    document.body.classList.remove("dark-theme");
+  }
+
+  // Reload translations if locale changed
+  if (context.locale !== getCurrentLocale()) {
+    loadTranslations(context.locale);
+  }
+});
+
+// ==========================================
+// 3. Respond to Search Requests
+// ==========================================
+
+// User searches in HaexHub main search bar
+// HaexHub broadcasts search to all extensions
+client.on("search.request", async (event) => {
+  const searchEvent = event as SearchRequestEvent;
+  const { query, requestId } = searchEvent.data;
+
+  console.log("Search request:", query.query);
+
+  // Search in extension's data
+  const myTable = client.getTableName("notes");
+
+  try {
+    const notes = await client.db.query(
+      `SELECT id, title, content FROM ${myTable} 
+       WHERE title LIKE ? OR content LIKE ?
+       LIMIT ?`,
+      [`%${query.query}%`, `%${query.query}%`, query.limit || 10]
+    );
+
+    // Convert to search results
+    const results = notes.map((note: any) => ({
+      id: note.id.toString(),
+      title: note.title,
+      description: note.content.substring(0, 100) + "...",
+      type: "note",
+      data: {
+        noteId: note.id,
+        extensionId: client.extensionInfo?.fullId,
+      },
+      score: calculateRelevance(note, query.query),
+    }));
+
+    // Send results back to HaexHub
+    await client.respondToSearch(requestId, results);
+
+    console.log(`Sent ${results.length} search results`);
+  } catch (error) {
+    console.error("Search failed:", error);
+    // Send empty results on error
+    await client.respondToSearch(requestId, []);
+  }
+});
+
+// ==========================================
+// 4. Complete Example: Notes Extension
+// ==========================================
+
+class NotesExtension {
+  private client = createHaexHubClient({ debug: true });
+  private notesTable: string = "";
+
+  async initialize() {
+    // Wait for SDK initialization
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    this.notesTable = this.client.getTableName("notes");
+
+    // Setup table
+    await this.client.db.createTable(
+      this.notesTable,
       `
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -36,79 +130,98 @@ async function main() {
     `
     );
 
-    // 3. Insert some notes
-    console.log("Inserting notes...");
-    const note1Id = await client.db.insert("notes", {
-      title: "First Note",
-      content: "This is my first note!",
-    });
+    // Apply initial theme
+    this.applyTheme();
 
-    const note2Id = await client.db.insert("notes", {
-      title: "Second Note",
-      content: "This is my second note!",
-    });
+    // Listen to context changes
+    this.client.on("context.changed", () => this.applyTheme());
 
-    console.log(`Created notes with IDs: ${note1Id}, ${note2Id}`);
-
-    // 4. Query notes
-    console.log("Querying notes...");
-    const allNotes = await client.db.query(
-      "SELECT * FROM notes ORDER BY created_at DESC"
-    );
-    console.log("All notes:", allNotes);
-
-    // 5. Update a note
-    console.log("Updating note...");
-    await client.db.update(
-      "notes",
-      {
-        content: "Updated content!",
-        updated_at: Math.floor(Date.now() / 1000),
-      },
-      "id = ?",
-      [note1Id]
+    // Register search handler
+    this.client.on("search.request", (e) =>
+      this.handleSearch(e as SearchRequestEvent)
     );
 
-    // 6. Get single note
-    const updatedNote = await client.db.queryOne(
-      "SELECT * FROM notes WHERE id = ?",
-      [note1Id]
+    console.log("Notes extension initialized");
+  }
+
+  private applyTheme() {
+    const context = this.client.context;
+    if (!context) return;
+
+    const isDark =
+      context.theme === "dark" ||
+      (context.theme === "system" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+    document.documentElement.setAttribute(
+      "data-theme",
+      isDark ? "dark" : "light"
     );
-    console.log("Updated note:", updatedNote);
+  }
 
-    // 7. Count notes
-    const noteCount = await client.db.count("notes");
-    console.log(`Total notes: ${noteCount}`);
+  private async handleSearch(event: SearchRequestEvent) {
+    const { query, requestId } = event.data;
 
-    // 8. Delete a note
-    console.log("Deleting note...");
-    await client.db.delete("notes", "id = ?", [note2Id]);
+    const notes = await this.client.db.query<{
+      id: number;
+      title: string;
+      content: string;
+    }>(
+      `SELECT * FROM ${this.notesTable} 
+       WHERE title LIKE ? OR content LIKE ?
+       LIMIT ?`,
+      [`%${query.query}%`, `%${query.query}%`, query.limit || 5]
+    );
 
-    // 9. List all tables
-    const tables = await client.db.listTables();
-    console.log("Available tables:", tables);
+    const results = notes.map((note) => ({
+      id: `note-${note.id}`,
+      title: note.title,
+      description: note.content?.substring(0, 100),
+      type: "note",
+      data: { noteId: note.id },
+      score: this.calculateScore(note, query.query),
+    }));
 
-    // 10. Get table info
-    const tableInfo = await client.db.getTableInfo("notes");
-    console.log("Table info:", tableInfo);
+    await this.client.respondToSearch(requestId, results);
+  }
 
-    // 11. Listen to events
-    client.on("database.changed", (event) => {
-      console.log("Database changed:", event);
+  private calculateScore(note: any, query: string): number {
+    const titleMatch = note.title.toLowerCase().includes(query.toLowerCase());
+    const contentMatch = note.content
+      ?.toLowerCase()
+      .includes(query.toLowerCase());
+
+    if (titleMatch) return 1.0;
+    if (contentMatch) return 0.7;
+    return 0.5;
+  }
+
+  async createNote(title: string, content: string) {
+    return await this.client.db.insert(this.notesTable, {
+      title,
+      content,
     });
-
-    console.log("✅ All operations completed successfully!");
-  } catch (error) {
-    console.error("❌ Error:", error);
   }
 }
 
-// Run the example
-main().catch(console.error);
+// Initialize extension
+const notesApp = new NotesExtension();
+notesApp.initialize();
 
-// Cleanup on exit
-process.on("SIGINT", () => {
-  console.log("Cleaning up...");
-  client.destroy();
-  process.exit(0);
-});
+// Helper function
+function calculateRelevance(note: any, query: string): number {
+  const titleMatch = note.title.toLowerCase().includes(query.toLowerCase());
+  const contentMatch = note.content.toLowerCase().includes(query.toLowerCase());
+
+  if (titleMatch) return 1.0;
+  if (contentMatch) return 0.7;
+  return 0.5;
+}
+
+function getCurrentLocale(): string {
+  return "en"; // Placeholder
+}
+
+function loadTranslations(locale: string): void {
+  console.log(`Loading translations for: ${locale}`);
+}

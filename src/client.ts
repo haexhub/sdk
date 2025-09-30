@@ -7,8 +7,16 @@ import type {
   PermissionResponse,
   DatabasePermissionRequest,
   ExtensionInfo,
+  ApplicationContext,
+  SearchResult,
+  ContextChangedEvent,
 } from "./types";
-import { ErrorCode } from "./types";
+import {
+  ErrorCode,
+  KEY_HASH_LENGTH,
+  DEFAULT_TIMEOUT,
+  HaexHubError,
+} from "./types";
 import { DatabaseAPI } from "./api/database";
 
 export class HaexHubClient {
@@ -26,17 +34,17 @@ export class HaexHubClient {
   private initialized = false;
   private requestCounter = 0;
   private _extensionInfo: ExtensionInfo | null = null;
+  private _context: ApplicationContext | null = null;
 
   public readonly db: DatabaseAPI;
 
   constructor(config: HaexHubConfig = {}) {
     this.config = {
       debug: config.debug ?? false,
-      timeout: config.timeout ?? 30000,
+      timeout: config.timeout ?? DEFAULT_TIMEOUT,
     };
 
     this.db = new DatabaseAPI(this);
-
     this.init();
   }
 
@@ -44,12 +52,23 @@ export class HaexHubClient {
     return this._extensionInfo;
   }
 
+  public get context(): ApplicationContext | null {
+    return this._context;
+  }
+
+  public async getDependencies(): Promise<ExtensionInfo[]> {
+    return this.request<ExtensionInfo[]>("extensions.getDependencies");
+  }
+
   public getTableName(tableName: string): string {
     if (!this._extensionInfo) {
-      throw new Error(
-        "Extension info not available yet. Make sure the client is initialized."
+      throw new HaexHubError(
+        ErrorCode.EXTENSION_INFO_UNAVAILABLE,
+        "errors.extension_info_unavailable"
       );
     }
+
+    this.validateTableName(tableName);
 
     const { keyHash, name } = this._extensionInfo;
     const namePrefix = name.replace(/-/g, "_");
@@ -62,6 +81,10 @@ export class HaexHubClient {
     extensionName: string,
     tableName: string
   ): string {
+    this.validateKeyHash(keyHash);
+    this.validateExtensionName(extensionName);
+    this.validateTableName(tableName);
+
     const namePrefix = extensionName.replace(/-/g, "_");
 
     return `${keyHash}_${namePrefix}_${tableName}`;
@@ -79,8 +102,8 @@ export class HaexHubClient {
     }
 
     const keyHash = parts[0];
-
-    if (!keyHash || !/^[a-f0-9]{20}$/i.test(keyHash)) {
+    const keyHashPattern = new RegExp(`^[a-f0-9]{${KEY_HASH_LENGTH}}$`, "i");
+    if (!keyHash || !keyHashPattern.test(keyHash)) {
       return null;
     }
 
@@ -114,60 +137,27 @@ export class HaexHubClient {
   }
 
   public async checkDatabasePermission(
-    request: Omit<DatabasePermissionRequest, "reason">
+    resource: string,
+    operation: "read" | "write"
   ): Promise<boolean> {
     const response = await this.request<PermissionResponse>(
       "permissions.database.check",
       {
-        resource: request.resource,
-        operation: request.operation,
+        resource,
+        operation,
       }
     );
     return response.status === "granted";
   }
 
-  private async init(): Promise<void> {
-    if (this.initialized) return;
-
-    if (window.self === window.top) {
-      throw new Error(ErrorCode.NOT_IN_IFRAME);
-    }
-
-    this.messageHandler = this.handleMessage.bind(this);
-    window.addEventListener("message", this.messageHandler);
-
-    this.initialized = true;
-    this.log("HaexHub SDK initialized");
-
-    try {
-      this._extensionInfo = await this.request<ExtensionInfo>(
-        "extension.getInfo"
-      );
-      this.log("Extension info received:", this._extensionInfo);
-    } catch (error) {
-      this.log("Failed to get extension info:", error);
-    }
-  }
-
-  private handleMessage(event: MessageEvent): void {
-    const data = event.data as HaexHubResponse | HaexHubEvent;
-
-    if ("id" in data && this.pendingRequests.has(data.id)) {
-      const pending = this.pendingRequests.get(data.id)!;
-      clearTimeout(pending.timeout);
-      this.pendingRequests.delete(data.id);
-
-      if (data.error) {
-        pending.reject(data.error);
-      } else {
-        pending.resolve(data.result);
-      }
-      return;
-    }
-
-    if ("type" in data && data.type) {
-      this.emitEvent(data as HaexHubEvent);
-    }
+  public async respondToSearch(
+    requestId: string,
+    results: SearchResult[]
+  ): Promise<void> {
+    await this.request("search.respond", {
+      requestId,
+      results,
+    });
   }
 
   public async request<T = unknown>(
@@ -185,16 +175,20 @@ export class HaexHubClient {
     return new Promise<T>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(requestId);
-        reject({
-          code: ErrorCode.TIMEOUT,
-          message: `Request timeout after ${this.config.timeout}ms`,
-        });
+        reject(
+          new HaexHubError(ErrorCode.TIMEOUT, "errors.timeout", {
+            timeout: this.config.timeout,
+          })
+        );
       }, this.config.timeout);
 
       this.pendingRequests.set(requestId, { resolve, reject, timeout });
 
       this.log("Sending request:", request);
-      window.parent.postMessage({ id: requestId, ...request }, "*");
+      window.parent.postMessage(
+        { id: requestId, ...request },
+        this._extensionInfo?.allowedOrigin || "*"
+      );
     });
   }
 
@@ -212,6 +206,84 @@ export class HaexHubClient {
     }
   }
 
+  public destroy(): void {
+    if (this.messageHandler) {
+      window.removeEventListener("message", this.messageHandler);
+    }
+
+    this.pendingRequests.forEach(({ timeout }) => clearTimeout(timeout));
+    this.pendingRequests.clear();
+    this.eventListeners.clear();
+
+    this.initialized = false;
+    this.log("HaexHub SDK destroyed");
+  }
+
+  private async init(): Promise<void> {
+    if (this.initialized) return;
+
+    if (window.self === window.top) {
+      throw new HaexHubError(ErrorCode.NOT_IN_IFRAME, "errors.not_in_iframe");
+    }
+
+    this.messageHandler = this.handleMessage.bind(this);
+    window.addEventListener("message", this.messageHandler);
+
+    this.initialized = true;
+    this.log("HaexHub SDK initialized");
+
+    try {
+      this._extensionInfo = await this.request<ExtensionInfo>(
+        "extension.getInfo"
+      );
+      this.log("Extension info received:", this._extensionInfo);
+
+      this._context = await this.request<ApplicationContext>("context.get");
+      this.log("Application context received:", this._context);
+    } catch (error) {
+      this.log("Failed to get extension info or context:", error);
+    }
+  }
+
+  private handleMessage(event: MessageEvent): void {
+    if (
+      this._extensionInfo &&
+      event.origin !== this._extensionInfo.allowedOrigin
+    ) {
+      this.log("Rejected message from unauthorized origin:", event.origin);
+      return;
+    }
+
+    const data = event.data as HaexHubResponse | HaexHubEvent;
+
+    if ("id" in data && this.pendingRequests.has(data.id)) {
+      const pending = this.pendingRequests.get(data.id)!;
+      clearTimeout(pending.timeout);
+      this.pendingRequests.delete(data.id);
+
+      if (data.error) {
+        pending.reject(data.error);
+      } else {
+        pending.resolve(data.result);
+      }
+      return;
+    }
+
+    if ("type" in data && data.type) {
+      this.handleEvent(data as HaexHubEvent);
+    }
+  }
+
+  private handleEvent(event: HaexHubEvent): void {
+    if (event.type === "context.changed") {
+      const contextEvent = event as ContextChangedEvent;
+      this._context = contextEvent.data.context;
+      this.log("Context updated:", this._context);
+    }
+
+    this.emitEvent(event);
+  }
+
   private emitEvent(event: HaexHubEvent): void {
     this.log("Event received:", event);
     const listeners = this.eventListeners.get(event.type);
@@ -220,22 +292,54 @@ export class HaexHubClient {
     }
   }
 
-  public destroy(): void {
-    if (this.messageHandler) {
-      window.removeEventListener("message", this.messageHandler);
-    }
-
-    this.pendingRequests.forEach(({ timeout }) => clearTimeout(timeout));
-    this.pendingRequests.clear();
-
-    this.eventListeners.clear();
-
-    this.initialized = false;
-    this.log("HaexHub SDK destroyed");
-  }
-
   private generateRequestId(): string {
     return `req_${++this.requestCounter}`;
+  }
+
+  private validateKeyHash(keyHash: string): void {
+    const keyHashPattern = new RegExp(`^[a-f0-9]{${KEY_HASH_LENGTH}}$`, "i");
+    if (!keyHash || !keyHashPattern.test(keyHash)) {
+      throw new HaexHubError(
+        ErrorCode.INVALID_KEY_HASH,
+        "errors.invalid_key_hash",
+        { keyHash, expectedLength: KEY_HASH_LENGTH }
+      );
+    }
+  }
+
+  private validateExtensionName(extensionName: string): void {
+    if (!extensionName || !/^[a-z][a-z0-9-]*$/i.test(extensionName)) {
+      throw new HaexHubError(
+        ErrorCode.INVALID_EXTENSION_NAME,
+        "errors.invalid_extension_name",
+        { extensionName }
+      );
+    }
+  }
+
+  private validateTableName(tableName: string): void {
+    if (!tableName || typeof tableName !== "string") {
+      throw new HaexHubError(
+        ErrorCode.INVALID_TABLE_NAME,
+        "errors.table_name_empty"
+      );
+    }
+
+    if (tableName.includes("_")) {
+      throw new HaexHubError(
+        ErrorCode.INVALID_TABLE_NAME,
+        "errors.table_name_underscore",
+        { tableName }
+      );
+    }
+
+    if (!/^[a-z][a-z0-9-]*$/i.test(tableName)) {
+      throw new HaexHubError(
+        ErrorCode.INVALID_TABLE_NAME,
+        "errors.table_name_format",
+        { tableName }
+      );
+    }
   }
 
   private log(...args: unknown[]): void {

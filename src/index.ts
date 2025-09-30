@@ -4,7 +4,6 @@ export { DatabaseAPI } from "./api/database";
 export type {
   HaexHubRequest,
   HaexHubResponse,
-  HaexHubError,
   HaexHubConfig,
   HaexHubEvent,
   EventCallback,
@@ -17,9 +16,20 @@ export type {
   DatabaseTableInfo,
   DatabaseColumnInfo,
   ExtensionInfo,
+  ApplicationContext,
+  SearchQuery,
+  SearchResult,
+  ContextChangedEvent,
+  SearchRequestEvent,
 } from "./types";
 
-export { PermissionStatus, ErrorCode } from "./types";
+export {
+  PermissionStatus,
+  ErrorCode,
+  KEY_HASH_LENGTH,
+  DEFAULT_TIMEOUT,
+} from "./types";
+export { HaexHubError } from "./types";
 
 import { HaexHubClient } from "./client";
 

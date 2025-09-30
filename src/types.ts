@@ -1,3 +1,7 @@
+// Constants
+export const KEY_HASH_LENGTH = 20; // 20 hex chars = 80 bits
+export const DEFAULT_TIMEOUT = 30000; // 30 seconds in milliseconds
+
 // Core Protocol Types
 export interface HaexHubRequest {
   method: string;
@@ -12,9 +16,9 @@ export interface HaexHubResponse<T = unknown> {
 }
 
 export interface HaexHubError {
-  code: string;
+  code: ErrorCode;
   message: string;
-  details?: unknown;
+  details?: Record<string, unknown>;
 }
 
 // Extension Info (provided by HaexHub at runtime)
@@ -25,6 +29,30 @@ export interface ExtensionInfo {
   version: string;
   displayName?: string;
   namespace?: string;
+  allowedOrigin: string;
+}
+
+// Application Context (provided by HaexHub)
+export interface ApplicationContext {
+  theme: "light" | "dark" | "system";
+  locale: string;
+  platform: "desktop" | "mobile" | "tablet";
+}
+
+// Search Types
+export interface SearchQuery {
+  query: string;
+  filters?: Record<string, unknown>;
+  limit?: number;
+}
+
+export interface SearchResult {
+  id: string;
+  title: string;
+  description?: string;
+  type: string;
+  data?: Record<string, unknown>;
+  score?: number;
 }
 
 // Permission Types
@@ -89,6 +117,22 @@ export interface HaexHubEvent {
   timestamp: number;
 }
 
+// Specific Event Types
+export interface ContextChangedEvent extends HaexHubEvent {
+  type: "context.changed";
+  data: {
+    context: ApplicationContext;
+  };
+}
+
+export interface SearchRequestEvent extends HaexHubEvent {
+  type: "search.request";
+  data: {
+    query: SearchQuery;
+    requestId: string;
+  };
+}
+
 export type EventCallback = (event: HaexHubEvent) => void;
 
 // Config Types
@@ -99,10 +143,70 @@ export interface HaexHubConfig {
 
 // Error Codes
 export enum ErrorCode {
-  PERMISSION_DENIED = "PERMISSION_DENIED",
-  INVALID_PARAMS = "INVALID_PARAMS",
-  METHOD_NOT_FOUND = "METHOD_NOT_FOUND",
-  INTERNAL_ERROR = "INTERNAL_ERROR",
+  // Connection Errors
   TIMEOUT = "TIMEOUT",
   NOT_IN_IFRAME = "NOT_IN_IFRAME",
+  UNAUTHORIZED_ORIGIN = "UNAUTHORIZED_ORIGIN",
+
+  // Permission Errors
+  PERMISSION_DENIED = "PERMISSION_DENIED",
+
+  // Validation Errors
+  INVALID_KEY_HASH = "INVALID_KEY_HASH",
+  INVALID_EXTENSION_NAME = "INVALID_EXTENSION_NAME",
+  INVALID_TABLE_NAME = "INVALID_TABLE_NAME",
+  INVALID_PARAMS = "INVALID_PARAMS",
+
+  // Extension Errors
+  EXTENSION_NOT_INITIALIZED = "EXTENSION_NOT_INITIALIZED",
+  EXTENSION_INFO_UNAVAILABLE = "EXTENSION_INFO_UNAVAILABLE",
+
+  // API Errors
+  METHOD_NOT_FOUND = "METHOD_NOT_FOUND",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+  DATABASE_ERROR = "DATABASE_ERROR",
+}
+
+export class HaexHubError extends Error {
+  constructor(
+    public code: ErrorCode,
+    public messageKey: string,
+    public details?: Record<string, unknown>
+  ) {
+    super(messageKey);
+    this.name = "HaexHubError";
+  }
+
+  /**
+   * Get localized error message
+   * @param locale - Locale code (e.g., 'en', 'de')
+   * @param translations - Translation object
+   */
+  getLocalizedMessage(
+    locale: string = "en",
+    translations?: Record<string, Record<string, string>>
+  ): string {
+    if (!translations || !translations[locale]) {
+      return this.messageKey;
+    }
+
+    let message = translations[locale][this.messageKey] || this.messageKey;
+
+    // Replace placeholders with details
+    if (this.details) {
+      Object.entries(this.details).forEach(([key, value]) => {
+        message = message.replace(`{${key}}`, String(value));
+      });
+    }
+
+    return message;
+  }
+
+  toJSON() {
+    return {
+      code: this.code,
+      message: this.messageKey,
+      details: this.details,
+    };
+  }
 }
