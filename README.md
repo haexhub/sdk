@@ -497,6 +497,6 @@ MIT
 
 ## Support
 
-- Documentation: https://docs.haexhub.com
-- GitHub: https://github.com/haexhub/haexhub-sdk
-- Issues: https://github.com/haexhub/haexhub-sdk/issues
+- Documentation: https://github.com/haexhub/sdk
+- GitHub: https://github.com/haexhub/sdk
+- Issues: https://github.com/haexhub/sdk/issues
