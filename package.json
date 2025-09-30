@@ -36,9 +36,14 @@
   "license": "ISC",
   "packageManager": "pnpm@10.15.1",
   "devDependencies": {
+    "@types/archiver": "^6.0.3",
     "@types/node": "^24.5.2",
     "eslint": "^9.36.0",
     "tsup": "^8.0.2",
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "commander": "^14.0.1"
   }
 }
