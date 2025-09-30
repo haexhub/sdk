@@ -1,5 +1,5 @@
 {
-  "name": "haexhub-sdk",
+  "name": "@haexhub/sdk",
   "version": "0.1.0",
   "description": "SDK for building HaexHub extensions",
   "repository": {
