@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // @haexhub/sdk/src/cli/index.ts
 
 import { Command } from "commander";
