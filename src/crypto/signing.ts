@@ -155,7 +155,7 @@ export class ExtensionSigner {
         await fs.writeFile(manifestPath, originalManifestContent);
         console.log("content_hash:", contentHash);
         console.log(
-          `✓ Extension packaged: ${finalOutputPath} (${archive.pointer()} bytes)`
+          `✓ Extension packaged!!: ${finalOutputPath} (${archive.pointer()} bytes)`
         );
         resolve(finalOutputPath);
       });
