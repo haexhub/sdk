@@ -472,6 +472,16 @@ npm run build:release
 
 This creates your-extension-1.0.0.haextension - a signed ZIP file ready for distribution.
 
+---- OR -----
+
+Build your extension and run
+
+```bash
+npx haexhub sign dist -k private.key
+```
+
+This will sign your extension in the `dist` folder.
+
 ### 4. What Gets Signed?
 
 The signing process:

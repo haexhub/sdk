@@ -100,46 +100,75 @@ export class ExtensionSigner {
     privateKeyHex: string,
     outputPath?: string
   ): Promise<string> {
-    // 1. Signiere Extension
-    const { signature, publicKey } = await this.signExtension(
-      extensionPath,
-      privateKeyHex
-    );
-
-    // 2. Manifest updaten
+    // === VORBEREITUNG ===
     const manifestPath = path.join(extensionPath, "manifest.json");
-    const manifestContent = await fs.readFile(manifestPath, "utf-8");
-    const manifest = JSON.parse(manifestContent);
+    const originalManifestContent = await fs.readFile(manifestPath, "utf-8");
+    const manifest = JSON.parse(originalManifestContent);
 
-    manifest.public_key = publicKey;
-    manifest.signature = signature;
+    // 1. Private Key importieren und Public Key ableiten
+    const privateKeyBuffer = Buffer.from(privateKeyHex, "hex");
+    const privateKey = await webcrypto.subtle.importKey(
+      "pkcs8",
+      privateKeyBuffer,
+      { name: "Ed25519", namedCurve: "Ed25519" },
+      true,
+      ["sign"]
+    );
+    const publicKeyBuffer = await this.derivePublicKey(privateKeyBuffer);
+    const publicKeyHex = Buffer.from(publicKeyBuffer).toString("hex");
 
+    // === SIGNIERUNGSPROZESS ===
+
+    // 2. Manifest für die Hash-Berechnung vorbereiten
+    //    (Public Key rein, Signatur als leeren Platzhalter)
+    manifest.public_key = publicKeyHex;
+    manifest.signature = ""; // signature leeren um Hash zu berechnen
     await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
-    // 3. ZIP erstellen mit archiver
+    // 3. Hash vom "kanonischen Inhalt" berechnen
+    //    Das Verzeichnis enthält jetzt die manifest.json mit leerer Signatur.
+    const contentHash = await this.hashDirectory(extensionPath);
+
+    // 4. Echte Signatur aus diesem Hash erstellen
+    const signatureBuffer = await webcrypto.subtle.sign(
+      "Ed25519",
+      privateKey,
+      contentHash
+    );
+    const signatureHex = Buffer.from(signatureBuffer).toString("hex");
+
+    // 5. Finale manifest.json mit der echten Signatur erstellen
+    manifest.signature = signatureHex;
+    await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+
+    // === VERPACKUNG & AUFRÄUMEN ===
+
+    // 6. Das Verzeichnis (das jetzt die finale manifest.json enthält) zippen
     const finalOutputPath =
       outputPath || `${manifest.id}-${manifest.version}.haextension`;
     const output = fsSync.createWriteStream(finalOutputPath);
-    const archive = archiver("zip", {
-      zlib: { level: 9 }, // Maximale Kompression
-    });
+    const archive = archiver("zip", { zlib: { level: 9 } });
 
     return new Promise((resolve, reject) => {
-      output.on("close", () => {
+      output.on("close", async () => {
+        // Aufräumen: Die Original-Manifest-Datei wiederherstellen
+        await fs.writeFile(manifestPath, originalManifestContent);
         console.log(
           `✓ Extension packaged: ${finalOutputPath} (${archive.pointer()} bytes)`
         );
         resolve(finalOutputPath);
       });
 
-      output.on("error", reject);
+      output.on("error", (err) => {
+        // Bei Fehler ebenfalls aufräumen
+        fs.writeFile(manifestPath, originalManifestContent).finally(() =>
+          reject(err)
+        );
+      });
       archive.on("error", reject);
 
       archive.pipe(output);
-
-      // Alle Dateien aus dem Verzeichnis hinzufügen
       archive.directory(extensionPath, false);
-
       archive.finalize();
     });
   }
