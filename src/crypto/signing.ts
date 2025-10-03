@@ -129,7 +129,6 @@ export class ExtensionSigner {
     //    Das Verzeichnis enthält jetzt die manifest.json mit leerer Signatur.
     const contentHash = await this.hashDirectory(extensionPath);
 
-    console.log("content_hash:", contentHash);
     // 4. Echte Signatur aus diesem Hash erstellen
     const signatureBuffer = await webcrypto.subtle.sign(
       "Ed25519",
@@ -154,6 +153,7 @@ export class ExtensionSigner {
       output.on("close", async () => {
         // Aufräumen: Die Original-Manifest-Datei wiederherstellen
         await fs.writeFile(manifestPath, originalManifestContent);
+        console.log("content_hash:", contentHash);
         console.log(
           `✓ Extension packaged: ${finalOutputPath} (${archive.pointer()} bytes)`
         );
