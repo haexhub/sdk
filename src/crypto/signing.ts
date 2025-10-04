@@ -123,7 +123,14 @@ export class ExtensionSigner {
     //    (Public Key rein, Signatur als leeren Platzhalter)
     manifest.public_key = publicKeyHex;
     manifest.signature = ""; // signature leeren um Hash zu berechnen
-    await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+
+    const canonicalManifestForHashing =
+      this.sortObjectKeysRecursively(manifest);
+
+    await fs.writeFile(
+      manifestPath,
+      JSON.stringify(canonicalManifestForHashing, null, 2)
+    );
 
     // 3. Hash vom "kanonischen Inhalt" berechnen
     //    Das Verzeichnis enthält jetzt die manifest.json mit leerer Signatur.
@@ -175,6 +182,27 @@ export class ExtensionSigner {
   }
 
   // Helper Methods
+
+  /**
+   * Sortiert rekursiv die Schlüssel aller Objekte in einer Datenstruktur alphabetisch,
+   * um einen kanonischen, deterministischen JSON-String zu erzeugen.
+   */
+  private static sortObjectKeysRecursively(obj: any): any {
+    if (typeof obj !== "object" || obj === null) {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(this.sortObjectKeysRecursively);
+    }
+
+    return Object.keys(obj)
+      .sort()
+      .reduce((result, key) => {
+        result[key] = this.sortObjectKeysRecursively(obj[key]);
+        return result;
+      }, {} as { [key: string]: any });
+  }
 
   private static async getAllFiles(dirPath: string): Promise<string[]> {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
