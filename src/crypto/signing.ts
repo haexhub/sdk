@@ -193,7 +193,7 @@ export class ExtensionSigner {
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(this.sortObjectKeysRecursively);
+      return obj.map((item) => this.sortObjectKeysRecursively(item));
     }
 
     return Object.keys(obj)
