@@ -246,6 +246,16 @@ export class HaexHubClient {
   }
 
   private handleMessage(event: MessageEvent): void {
+    console.log("[SDK Debug] Message received from:", event.origin);
+    console.log(
+      "[SDK Debug] Allowed origin:",
+      this._extensionInfo?.allowedOrigin
+    );
+    console.log("[SDK Debug] extensionInfo exists:", !!this._extensionInfo);
+    console.log(
+      "[SDK Debug] Origins match:",
+      event.origin === this._extensionInfo?.allowedOrigin
+    );
     if (
       this._extensionInfo &&
       event.origin !== this._extensionInfo.allowedOrigin
