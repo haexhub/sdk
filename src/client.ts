@@ -238,8 +238,19 @@ export class HaexHubClient {
       );
       this.log("Extension info received:", this._extensionInfo);
 
+      this.emitEvent({
+        type: "extension.info.loaded",
+        data: { info: this._extensionInfo },
+        timestamp: Date.now(),
+      });
       this._context = await this.request<ApplicationContext>("context.get");
       this.log("Application context received:", this._context);
+
+      this.emitEvent({
+        type: "context.loaded",
+        data: { context: this._context },
+        timestamp: Date.now(),
+      });
     } catch (error) {
       this.log("Failed to get extension info or context:", error);
     }
