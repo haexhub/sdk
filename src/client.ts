@@ -18,6 +18,7 @@ import {
   HaexHubError,
 } from "./types";
 import { DatabaseAPI } from "./api/database";
+import { StorageAPI } from "./api/storage";
 
 export class HaexHubClient {
   private config: Required<HaexHubConfig>;
@@ -37,6 +38,7 @@ export class HaexHubClient {
   private _context: ApplicationContext | null = null;
 
   public readonly db: DatabaseAPI;
+  public readonly storage: StorageAPI;
 
   constructor(config: HaexHubConfig = {}) {
     this.config = {
@@ -45,6 +47,7 @@ export class HaexHubClient {
     };
 
     this.db = new DatabaseAPI(this);
+    this.storage = new StorageAPI(this);
     this.init();
   }
 
