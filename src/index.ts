@@ -42,6 +42,7 @@ export {
   installSessionStoragePolyfill,
   installCookiePolyfill,
   installHistoryPolyfill,
+  installBaseTag,
 } from './polyfills';
 
 import { HaexHubClient } from "./client";

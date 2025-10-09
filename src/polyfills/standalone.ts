@@ -8,6 +8,7 @@ import {
 } from './localStorage'
 import { installCookiePolyfill } from './cookies'
 import { installHistoryPolyfill } from './history'
+import { installBaseTag } from './baseTag'
 
 /**
  * Get the standalone polyfill code as a string
@@ -31,6 +32,9 @@ export function getPolyfillCode(): string {
 
   // History API Polyfill
   (${installHistoryPolyfill.toString()})();
+
+  // Base Tag Polyfill (for SPA routing)
+  (${installBaseTag.toString()})();
 
   console.log('[HaexHub] All polyfills loaded successfully');
 })();`

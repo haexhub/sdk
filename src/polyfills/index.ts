@@ -22,10 +22,12 @@
 import { installLocalStoragePolyfill, installSessionStoragePolyfill } from './localStorage';
 import { installCookiePolyfill } from './cookies';
 import { installHistoryPolyfill } from './history';
+import { installBaseTag } from './baseTag';
 
 export { installLocalStoragePolyfill, installSessionStoragePolyfill } from './localStorage';
 export { installCookiePolyfill } from './cookies';
 export { installHistoryPolyfill } from './history';
+export { installBaseTag } from './baseTag';
 
 /**
  * Install all HaexHub polyfills
@@ -48,6 +50,9 @@ export function installPolyfills(): void {
 
   // Install history polyfill (waits for DOM ready internally)
   installHistoryPolyfill();
+
+  // Install base tag (waits for extension info from parent window)
+  installBaseTag();
 
   console.log('[HaexHub] All polyfills loaded successfully');
 }
