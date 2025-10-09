@@ -39,7 +39,12 @@ export default defineNuxtModule<ModuleOptions>({
         const __dirname = dirname(fileURLToPath(import.meta.url))
         const polyfillPath = resolve(__dirname, '../polyfills-standalone.js')
 
-        const polyfillCode = readFileSync(polyfillPath, 'utf-8')
+        let polyfillCode = readFileSync(polyfillPath, 'utf-8')
+
+        // Remove the documentation header (lines 1-6: /** ... <script src=... */ )
+        // Keep only the actual IIFE code
+        polyfillCode = polyfillCode.replace(/^\/\*\*[\s\S]*?\*\/\s*/m, '').trim()
+
         const polyfillScript = `<script>${polyfillCode}</script>`
 
         // Find all HTML files in the output directory
