@@ -68,13 +68,19 @@ function interceptConsole(level: 'log' | 'info' | 'warn' | 'error' | 'debug') {
   }
 }
 
-export function installConsoleForwarding(): void {
+export function installConsoleForwarding(debug: boolean = false): void {
   if (typeof window === 'undefined') {
     return
   }
 
   // Only install if we're in an iframe (extension context)
   if (window.self === window.top) {
+    return
+  }
+
+  // Only install if debug mode is enabled
+  if (!debug) {
+    console.log('[HaexHub] Console forwarding disabled (not in debug mode)')
     return
   }
 

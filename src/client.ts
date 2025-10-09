@@ -19,6 +19,7 @@ import {
 } from "./types";
 import { DatabaseAPI } from "./api/database";
 import { StorageAPI } from "./api/storage";
+import { installConsoleForwarding } from "./polyfills/consoleForwarding";
 
 export class HaexHubClient {
   private config: Required<HaexHubConfig>;
@@ -48,6 +49,10 @@ export class HaexHubClient {
 
     this.db = new DatabaseAPI(this);
     this.storage = new StorageAPI(this);
+
+    // Install console forwarding if in debug mode
+    installConsoleForwarding(this.config.debug);
+
     this.init();
   }
 

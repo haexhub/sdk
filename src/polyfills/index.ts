@@ -23,7 +23,6 @@ import { installLocalStoragePolyfill, installSessionStoragePolyfill } from './lo
 import { installCookiePolyfill } from './cookies';
 import { installHistoryPolyfill } from './history';
 import { installBaseTag } from './baseTag';
-import { installConsoleForwarding } from './consoleForwarding';
 
 export { installLocalStoragePolyfill, installSessionStoragePolyfill } from './localStorage';
 export { installCookiePolyfill } from './cookies';
@@ -56,8 +55,7 @@ export function installPolyfills(): void {
   // Install base tag (waits for extension info from parent window)
   installBaseTag();
 
-  // Install console forwarding to parent window
-  installConsoleForwarding();
+  // Note: Console forwarding is installed by HaexHubClient when debug mode is enabled
 
   console.log('[HaexHub] All polyfills loaded successfully');
 }
