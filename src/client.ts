@@ -192,10 +192,18 @@ export class HaexHubClient {
 
       this.pendingRequests.set(requestId, { resolve, reject, timeout });
 
-      this.log("Sending request:", request);
+      const targetOrigin = this._extensionInfo?.allowedOrigin || "*";
+      console.log("[SDK Debug] ========== Sending Request ==========");
+      console.log("[SDK Debug] Request ID:", requestId);
+      console.log("[SDK Debug] Method:", request.method);
+      console.log("[SDK Debug] Params:", request.params);
+      console.log("[SDK Debug] Target origin:", targetOrigin);
+      console.log("[SDK Debug] Extension info:", this._extensionInfo);
+      console.log("[SDK Debug] ========================================");
+
       window.parent.postMessage(
         { id: requestId, ...request },
-        this._extensionInfo?.allowedOrigin || "*"
+        targetOrigin
       );
     });
   }
@@ -265,42 +273,54 @@ export class HaexHubClient {
   }
 
   private handleMessage(event: MessageEvent): void {
-    console.log("[SDK Debug] Message received from:", event.origin);
-    console.log(
-      "[SDK Debug] Allowed origin:",
-      this._extensionInfo?.allowedOrigin
-    );
-    console.log("[SDK Debug] extensionInfo exists:", !!this._extensionInfo);
-    console.log(
-      "[SDK Debug] Origins match:",
-      event.origin === this._extensionInfo?.allowedOrigin
-    );
+    console.log("[SDK Debug] ========== Message Received ==========");
+    console.log("[SDK Debug] Event origin:", event.origin);
+    console.log("[SDK Debug] Event source:", event.source === window.parent ? "parent window" : "unknown");
+    console.log("[SDK Debug] Event data:", event.data);
+    console.log("[SDK Debug] Extension info loaded:", !!this._extensionInfo);
+    console.log("[SDK Debug] Allowed origin:", this._extensionInfo?.allowedOrigin);
+    console.log("[SDK Debug] Origins match:", event.origin === this._extensionInfo?.allowedOrigin);
+    console.log("[SDK Debug] Pending requests count:", this.pendingRequests.size);
+
     if (
       this._extensionInfo &&
       event.origin !== this._extensionInfo.allowedOrigin
     ) {
-      this.log("Rejected message from unauthorized origin:", event.origin);
+      console.error("[SDK Debug] ❌ REJECTED: Origin mismatch!");
+      console.error("[SDK Debug] Expected:", this._extensionInfo.allowedOrigin);
+      console.error("[SDK Debug] Got:", event.origin);
       return;
     }
 
     const data = event.data as HaexHubResponse | HaexHubEvent;
 
     if ("id" in data && this.pendingRequests.has(data.id)) {
+      console.log("[SDK Debug] ✅ Found pending request for ID:", data.id);
       const pending = this.pendingRequests.get(data.id)!;
       clearTimeout(pending.timeout);
       this.pendingRequests.delete(data.id);
 
       if (data.error) {
+        console.error("[SDK Debug] ❌ Request failed:", data.error);
         pending.reject(data.error);
       } else {
+        console.log("[SDK Debug] ✅ Request succeeded:", data.result);
         pending.resolve(data.result);
       }
       return;
     }
 
+    if ("id" in data && !this.pendingRequests.has(data.id)) {
+      console.warn("[SDK Debug] ⚠️ Received response for unknown request ID:", data.id);
+      console.warn("[SDK Debug] Known IDs:", Array.from(this.pendingRequests.keys()));
+    }
+
     if ("type" in data && data.type) {
+      console.log("[SDK Debug] Event received:", data.type);
       this.handleEvent(data as HaexHubEvent);
     }
+
+    console.log("[SDK Debug] ========== End Message ==========");
   }
 
   private handleEvent(event: HaexHubEvent): void {
