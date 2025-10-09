@@ -3,10 +3,8 @@
  * Automatically injects polyfills into HTML files
  * Works with React, Vue, Svelte, and any other Vite-based project
  */
-import { readFileSync } from 'node:fs'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { Plugin } from 'vite'
+import { getPolyfillCode } from './polyfills/standalone'
 
 export interface VitePluginOptions {
   /**
@@ -43,16 +41,8 @@ export function haexhubPlugin(options: VitePluginOptions = {}): Plugin {
       if (!injectPolyfills) return
 
       try {
-        // Load and prepare polyfill code
-        const __dirname = dirname(fileURLToPath(import.meta.url))
-        const polyfillPath = resolve(__dirname, '../polyfills-standalone.js')
-
-        let code = readFileSync(polyfillPath, 'utf-8')
-
-        // Remove documentation header
-        code = code.replace(/^\/\*\*[\s\S]*?\*\/\s*/m, '').trim()
-
-        polyfillCode = code
+        // Get polyfill code from modular polyfills
+        polyfillCode = getPolyfillCode()
       } catch (error) {
         console.error('[@haexhub/sdk] Failed to load polyfill:', error)
       }

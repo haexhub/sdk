@@ -4,8 +4,8 @@
  */
 import { defineNuxtModule, useNuxt } from '@nuxt/kit'
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
-import { join, resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join, resolve } from 'node:path'
+import { getPolyfillCode } from './polyfills/standalone'
 
 export interface ModuleOptions {
   injectPolyfills?: boolean
@@ -39,16 +39,8 @@ export default defineNuxtModule<ModuleOptions>({
         const publicDir = nitroOutput.publicDir || 'public'
         const distDir = resolve(nuxt.options.rootDir, outputDir, publicDir)
 
-        // Find polyfill file in the SDK package
-        const __dirname = dirname(fileURLToPath(import.meta.url))
-        const polyfillPath = resolve(__dirname, '../polyfills-standalone.js')
-
-        let polyfillCode = readFileSync(polyfillPath, 'utf-8')
-
-        // Remove the documentation header (lines 1-6: /** ... <script src=... */ )
-        // Keep only the actual IIFE code
-        polyfillCode = polyfillCode.replace(/^\/\*\*[\s\S]*?\*\/\s*/m, '').trim()
-
+        // Get polyfill code from modular polyfills
+        const polyfillCode = getPolyfillCode()
         const polyfillScript = `<script>${polyfillCode}</script>`
 
         // Find all HTML files in the output directory
