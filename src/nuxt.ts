@@ -33,7 +33,11 @@ export default defineNuxtModule<ModuleOptions>({
     // Add hook to inject polyfills after HTML generation
     nuxt.hook('nitro:build:public-assets', async () => {
       try {
-        const distDir = resolve(nuxt.options.rootDir, '.output/public')
+        // Use Nuxt's configured output directory instead of hardcoded path
+        const nitroOutput = nuxt.options.nitro?.output || {}
+        const outputDir = nitroOutput.dir || '.output'
+        const publicDir = nitroOutput.publicDir || 'public'
+        const distDir = resolve(nuxt.options.rootDir, outputDir, publicDir)
 
         // Find polyfill file in the SDK package
         const __dirname = dirname(fileURLToPath(import.meta.url))
