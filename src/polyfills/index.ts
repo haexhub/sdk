@@ -23,11 +23,13 @@ import { installLocalStoragePolyfill, installSessionStoragePolyfill } from './lo
 import { installCookiePolyfill } from './cookies';
 import { installHistoryPolyfill } from './history';
 import { installBaseTag } from './baseTag';
+import { installConsoleForwarding } from './consoleForwarding';
 
 export { installLocalStoragePolyfill, installSessionStoragePolyfill } from './localStorage';
 export { installCookiePolyfill } from './cookies';
 export { installHistoryPolyfill } from './history';
 export { installBaseTag } from './baseTag';
+export { installConsoleForwarding } from './consoleForwarding';
 
 /**
  * Install all HaexHub polyfills
@@ -53,6 +55,9 @@ export function installPolyfills(): void {
 
   // Install base tag (waits for extension info from parent window)
   installBaseTag();
+
+  // Install console forwarding to parent window
+  installConsoleForwarding();
 
   console.log('[HaexHub] All polyfills loaded successfully');
 }
