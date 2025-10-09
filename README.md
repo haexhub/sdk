@@ -52,6 +52,85 @@ const userId = await client.db.insert(myTable, {
 const users = await client.db.query(`SELECT * FROM ${myTable}`);
 ```
 
+## Built-in Polyfills
+
+The SDK automatically includes polyfills for browser APIs that don't work in custom protocol contexts (`haex-extension://`). **You don't need to do anything** - just import the SDK and everything works!
+
+### What's Included
+
+✅ **localStorage** - In-memory fallback when blocked
+✅ **sessionStorage** - No-op implementation
+✅ **Cookies** - In-memory cookie store
+✅ **History API** - Hash-based routing fallback for SPAs
+
+### How It Works
+
+When you import the SDK:
+
+```typescript
+import { createHaexHubClient } from '@haexhub/sdk';
+// Polyfills are automatically active!
+```
+
+The polyfills detect whether the native APIs work and only activate if needed. This means:
+
+- **Zero configuration** - Works out of the box
+- **Framework agnostic** - Works with Vue, React, Nuxt, Next.js, etc.
+- **No performance impact** - Only activates when necessary
+- **SPA-friendly** - Includes history API patches for client-side routing
+
+### Framework Support
+
+Works seamlessly with popular frameworks:
+
+**Nuxt 3 / Vue 3:**
+```typescript
+// nuxt.config.ts or app.vue
+import { createHaexHubClient } from '@haexhub/sdk';
+
+const client = createHaexHubClient();
+// localStorage, cookies, and routing work automatically
+```
+
+**React / Next.js:**
+```typescript
+// App.tsx or _app.tsx
+import { createHaexHubClient } from '@haexhub/sdk';
+
+const client = createHaexHubClient();
+// All storage APIs work normally
+```
+
+### Manual Control (Advanced)
+
+If you need fine-grained control, you can manually install individual polyfills:
+
+```typescript
+import {
+  installPolyfills,
+  installLocalStoragePolyfill,
+  installCookiePolyfill,
+  installHistoryPolyfill
+} from '@haexhub/sdk';
+
+// Install all at once
+installPolyfills();
+
+// Or install individually
+installLocalStoragePolyfill();
+installCookiePolyfill();
+installHistoryPolyfill();
+```
+
+### What This Means for You
+
+You can build your extension using **any framework and any libraries** without worrying about custom protocol restrictions. Things that "just work":
+
+- Vuex, Pinia, Zustand (state management using localStorage)
+- Vue Router, React Router (client-side routing)
+- Cookie-based authentication libraries
+- Any npm package that uses localStorage/cookies
+
 ## Core Concepts
 
 ### 1. Cryptographic Identity

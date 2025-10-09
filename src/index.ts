@@ -1,3 +1,7 @@
+// Import and auto-install polyfills first
+// This ensures localStorage, cookies, and history work in custom protocols
+import './polyfills';
+
 export { HaexHubClient } from "./client";
 export { DatabaseAPI } from "./api/database";
 
@@ -30,6 +34,15 @@ export {
   DEFAULT_TIMEOUT,
 } from "./types";
 export { HaexHubError } from "./types";
+
+// Export polyfill utilities for manual control if needed
+export {
+  installPolyfills,
+  installLocalStoragePolyfill,
+  installSessionStoragePolyfill,
+  installCookiePolyfill,
+  installHistoryPolyfill,
+} from './polyfills';
 
 import { HaexHubClient } from "./client";
 

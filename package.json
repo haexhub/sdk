@@ -34,9 +34,9 @@
     "dev": "tsup --watch",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "updateVersion:patch": "pnpm build && pnpm version patch",
-    "updateVersion:minor": "pnpm build && pnpm version minor",
-    "updateVersion:major": "pnpm build && pnpm version major",
+    "update:patch": "pnpm build && pnpm version patch",
+    "update:minor": "pnpm build && pnpm version minor",
+    "update:major": "pnpm build && pnpm version major",
     "publishVersion": "pnpm publish --access public"
   },
   "author": "haex",
