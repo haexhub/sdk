@@ -3,12 +3,25 @@
  * Dynamically injects <base> tag for SPA routing in custom protocol
  */
 
+// Add type declaration for the global flag
+declare global {
+  interface Window {
+    __HAEXHUB_BASE_TAG_INSTALLING__?: boolean
+  }
+}
+
 /**
  * Installs the base tag by fetching extension info from the parent window
  * Must run after the SDK initializes and extension info is available
  */
 export function installBaseTag() {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return
+  }
+
+  // Check if installation is already in progress (prevents duplicate runs)
+  if (window.__HAEXHUB_BASE_TAG_INSTALLING__) {
+    console.log('[HaexHub] Base tag installation already in progress, skipping')
     return
   }
 
@@ -25,6 +38,9 @@ export function installBaseTag() {
     console.log('[HaexHub] Base tag already exists, skipping')
     return
   }
+
+  // Mark as installing to prevent duplicate runs
+  window.__HAEXHUB_BASE_TAG_INSTALLING__ = true
 
   // Request extension info from parent window
   const requestId = `base_tag_${Date.now()}`
