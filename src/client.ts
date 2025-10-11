@@ -37,6 +37,7 @@ export class HaexHubClient {
   private requestCounter = 0;
   private _extensionInfo: ExtensionInfo | null = null;
   private _context: ApplicationContext | null = null;
+  private reactiveSubscribers: Set<() => void> = new Set();
 
   public readonly db: DatabaseAPI;
   public readonly storage: StorageAPI;
@@ -62,6 +63,17 @@ export class HaexHubClient {
 
   public get context(): ApplicationContext | null {
     return this._context;
+  }
+
+  public subscribe(callback: () => void): () => void {
+    this.reactiveSubscribers.add(callback);
+    return () => {
+      this.reactiveSubscribers.delete(callback);
+    };
+  }
+
+  private notifySubscribers(): void {
+    this.reactiveSubscribers.forEach((callback) => callback());
   }
 
   public async getDependencies(): Promise<ExtensionInfo[]> {
@@ -253,6 +265,7 @@ export class HaexHubClient {
         "extension.getInfo"
       );
       this.log("Extension info received:", this._extensionInfo);
+      this.notifySubscribers();
 
       this.emitEvent({
         type: "extension.info.loaded",
@@ -261,6 +274,7 @@ export class HaexHubClient {
       });
       this._context = await this.request<ApplicationContext>("context.get");
       this.log("Application context received:", this._context);
+      this.notifySubscribers();
 
       this.emitEvent({
         type: "context.loaded",
@@ -328,6 +342,7 @@ export class HaexHubClient {
       const contextEvent = event as ContextChangedEvent;
       this._context = contextEvent.data.context;
       this.log("Context updated:", this._context);
+      this.notifySubscribers();
     }
 
     this.emitEvent(event);
