@@ -82,18 +82,20 @@ export interface ReadonlyRef<T> {
  * console.log(context.value);
  * ```
  */
-export function createReactiveSDK(client: HaexHubClient) {
-  // Import Vue's ref dynamically to avoid hard dependency
+export function createReactiveSDK(
+  client: HaexHubClient,
+  vueRef?: <T>(value: T) => Ref<T>,
+  vueReadonly?: <T>(ref: Ref<T>) => ReadonlyRef<T>
+) {
   let ref: <T>(value: T) => Ref<T>;
   let readonly: <T>(ref: Ref<T>) => ReadonlyRef<T>;
 
-  try {
-    // Try to import from Vue 3
-    const vue = require('vue');
-    ref = vue.ref;
-    readonly = vue.readonly;
-  } catch {
-    // Fallback: Create simple reactive wrapper if Vue is not available
+  if (vueRef && vueReadonly) {
+    // Use provided Vue functions
+    ref = vueRef;
+    readonly = vueReadonly;
+  } else {
+    // Fallback: Create simple reactive wrapper
     ref = <T>(initialValue: T): Ref<T> => {
       let value = initialValue;
       return {
