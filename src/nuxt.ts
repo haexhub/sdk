@@ -57,11 +57,13 @@ export default defineNuxtModule<ModuleOptions>({
           }
         }
 
-        // Set baseURL if we have all required info
+        // Set baseURL and cdnURL if we have all required info
+        // cdnURL ensures all assets use the full path including extension info
         if (publicKey && /^[0-9a-f]{64}$/i.test(publicKey)) {
           const baseURL = `/${publicKey}/${manifest.name}/${manifest.version}/`
           nuxt.options.app.baseURL = baseURL
-          console.log(`✓ [@haexhub/sdk] Set app.baseURL to: ${baseURL}`)
+          nuxt.options.app.cdnURL = baseURL
+          console.log(`✓ [@haexhub/sdk] Set app.baseURL and cdnURL to: ${baseURL}`)
         }
       }
     } catch (e) {
