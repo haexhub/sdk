@@ -176,8 +176,14 @@ export default defineNuxtModule<ModuleOptions>({
             html = html.slice(0, insertPos) + baseTag + polyfillScript + html.slice(insertPos)
           }
 
+          // IMPORTANT: Convert all absolute asset paths to relative paths
+          // Replace all occurrences of ="_/ with =" to make paths relative
+          // This makes the base tag work correctly (base tag only affects relative URLs)
+          html = html.replace(/\b(href|src)="\/_nuxt\//g, '$1="_nuxt/')
+          html = html.replace(/"imports":\{"#entry":"\/_nuxt\//g, '"imports":{"#entry":"_nuxt/')
+
           writeFileSync(filePath, html)
-          console.log(`✓ [@haexhub/sdk] Base tag and polyfill injected into ${file}`)
+          console.log(`✓ [@haexhub/sdk] Base tag, polyfill, and relative paths applied to ${file}`)
         }
       } catch (error: unknown) {
         console.error('[@haexhub/sdk] Failed to inject polyfill:', error)
