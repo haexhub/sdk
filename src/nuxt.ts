@@ -64,8 +64,15 @@ export default defineNuxtModule<ModuleOptions>({
           // (e.g., _nuxt/... instead of /_nuxt/...)
           nuxt.options.app.baseURL = './'
           nuxt.options.app.buildAssetsDir = '_nuxt/' // Remove leading slash
+
+          // IMPORTANT: Set vite.base to './' to generate truly relative asset paths
+          // This overrides Nuxt's default absolute path behavior
+          nuxt.options.vite = nuxt.options.vite || {}
+          nuxt.options.vite.base = './'
+
           console.log(`✓ [@haexhub/sdk] Set app.baseURL to relative path (./) for base tag compatibility`)
           console.log(`✓ [@haexhub/sdk] Set buildAssetsDir to relative path (_nuxt/)`)
+          console.log(`✓ [@haexhub/sdk] Set vite.base to relative path (./)`)
           console.log(`  Base tag will be: /${publicKey}/${manifest.name}/${manifest.version}/`)
         }
       }
