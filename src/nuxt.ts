@@ -34,13 +34,26 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.hook('nitro:build:public-assets', async () => {
       try {
         // Read manifest.json to get extension info
-        const manifestPath = resolve(nuxt.options.rootDir, 'manifest.json')
+        // Try multiple possible locations
+        const possiblePaths = [
+          resolve(nuxt.options.rootDir, 'public', 'manifest.json'),
+          resolve(nuxt.options.rootDir, 'manifest.json'),
+        ]
+
         let manifest: { public_key?: string; name?: string; version?: string } | null = null
 
-        try {
-          const manifestContent = readFileSync(manifestPath, 'utf-8')
-          manifest = JSON.parse(manifestContent)
-        } catch (e) {
+        for (const manifestPath of possiblePaths) {
+          try {
+            const manifestContent = readFileSync(manifestPath, 'utf-8')
+            manifest = JSON.parse(manifestContent)
+            console.log(`[@haexhub/sdk] Found manifest at: ${manifestPath}`)
+            break
+          } catch (e) {
+            // Try next path
+          }
+        }
+
+        if (!manifest) {
           console.warn('[@haexhub/sdk] Could not read manifest.json - base tag will be set dynamically')
         }
 
