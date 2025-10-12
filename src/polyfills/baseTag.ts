@@ -52,19 +52,16 @@ export function installBaseTag() {
     if (data.id === requestId && data.result) {
       const extensionInfo = data.result
 
-      // Encode extension info to hex (same as Rust implementation)
-      const jsonStr = JSON.stringify({
-        key_hash: extensionInfo.keyHash,
-        name: extensionInfo.name,
-        version: extensionInfo.version
-      })
-      const hexEncoded = Array.from(new TextEncoder().encode(jsonStr))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')
+      // Use direct path structure: /{public_key}/{name}/{version}/
+      if (!extensionInfo.publicKey || !extensionInfo.name || !extensionInfo.version) {
+        console.error('[HaexHub] Missing required extension info fields:', extensionInfo)
+        window.removeEventListener('message', messageHandler)
+        return
+      }
 
-      // Create and inject base tag
+      // Create and inject base tag with new path structure
       const baseTag = document.createElement('base')
-      baseTag.href = `/${hexEncoded}/`
+      baseTag.href = `/${extensionInfo.publicKey}/${extensionInfo.name}/${extensionInfo.version}/`
 
       // Insert at the beginning of <head>
       const head = document.head || document.querySelector('head')
