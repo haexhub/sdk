@@ -25,6 +25,49 @@ export default defineNuxtModule<ModuleOptions>({
   setup(options: ModuleOptions) {
     const nuxt = useNuxt()
 
+    // Read extension info and set baseURL (for both dev and prod)
+    try {
+      const possiblePaths = [
+        resolve(nuxt.options.rootDir, 'haextension', 'manifest.json'),
+        resolve(nuxt.options.rootDir, 'public', 'manifest.json'),
+        resolve(nuxt.options.rootDir, 'manifest.json'),
+      ]
+
+      let manifest: { public_key?: string; name?: string; version?: string } | null = null
+
+      for (const manifestPath of possiblePaths) {
+        try {
+          const manifestContent = readFileSync(manifestPath, 'utf-8')
+          manifest = JSON.parse(manifestContent)
+          break
+        } catch (e) {
+          // Try next path
+        }
+      }
+
+      if (manifest?.name && manifest?.version) {
+        // Read public_key from haextension/public.key if not in manifest
+        let publicKey = manifest.public_key
+        if (!publicKey) {
+          const publicKeyPath = resolve(nuxt.options.rootDir, 'haextension', 'public.key')
+          try {
+            publicKey = readFileSync(publicKeyPath, 'utf-8').trim()
+          } catch (e) {
+            // Ignore - will use relative paths
+          }
+        }
+
+        // Set baseURL if we have all required info
+        if (publicKey && /^[0-9a-f]{64}$/i.test(publicKey)) {
+          const baseURL = `/${publicKey}/${manifest.name}/${manifest.version}/`
+          nuxt.options.app.baseURL = baseURL
+          console.log(`✓ [@haexhub/sdk] Set app.baseURL to: ${baseURL}`)
+        }
+      }
+    } catch (e) {
+      // Ignore - baseURL will remain at default
+    }
+
     // Only inject polyfills if enabled and building for production
     if (!options.injectPolyfills || nuxt.options.dev) {
       return
