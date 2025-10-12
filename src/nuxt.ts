@@ -34,18 +34,21 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.hook('nitro:build:public-assets', async () => {
       try {
         // Read manifest.json to get extension info
-        // Try multiple possible locations
+        // Priority: haextension/manifest.json (build-time config) > public/manifest.json (legacy)
         const possiblePaths = [
+          resolve(nuxt.options.rootDir, 'haextension', 'manifest.json'),
           resolve(nuxt.options.rootDir, 'public', 'manifest.json'),
           resolve(nuxt.options.rootDir, 'manifest.json'),
         ]
 
         let manifest: { public_key?: string; name?: string; version?: string } | null = null
+        let manifestSource = ''
 
         for (const manifestPath of possiblePaths) {
           try {
             const manifestContent = readFileSync(manifestPath, 'utf-8')
             manifest = JSON.parse(manifestContent)
+            manifestSource = manifestPath
             console.log(`[@haexhub/sdk] Found manifest at: ${manifestPath}`)
             break
           } catch (e) {
@@ -55,6 +58,18 @@ export default defineNuxtModule<ModuleOptions>({
 
         if (!manifest) {
           console.warn('[@haexhub/sdk] Could not read manifest.json - base tag will be set dynamically')
+        }
+
+        // Read public_key from haextension/public.key if not in manifest
+        if (manifest && !manifest.public_key) {
+          const publicKeyPath = resolve(nuxt.options.rootDir, 'haextension', 'public.key')
+          try {
+            const publicKey = readFileSync(publicKeyPath, 'utf-8').trim()
+            manifest.public_key = publicKey
+            console.log(`[@haexhub/sdk] Loaded public_key from: ${publicKeyPath}`)
+          } catch (e) {
+            console.warn('[@haexhub/sdk] Could not read haextension/public.key')
+          }
         }
 
         // Use Nuxt's configured output directory instead of hardcoded path
