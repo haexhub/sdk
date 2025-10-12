@@ -177,10 +177,20 @@ export default defineNuxtModule<ModuleOptions>({
           }
 
           // IMPORTANT: Convert all absolute asset paths to relative paths
-          // Replace all occurrences of ="_/ with =" to make paths relative
+          // Replace all occurrences of /_nuxt/ with _nuxt/ to make paths relative
           // This makes the base tag work correctly (base tag only affects relative URLs)
+
+          // Fix <link> and <script> tags
           html = html.replace(/\b(href|src)="\/_nuxt\//g, '$1="_nuxt/')
-          html = html.replace(/"imports":\{"#entry":"\/_nuxt\//g, '"imports":{"#entry":"_nuxt/')
+
+          // Fix import maps - need to keep it absolute or use ./ prefix for module resolution
+          html = html.replace(/"imports":\{"#entry":"\/_nuxt\//g, '"imports":{"#entry":"./_nuxt/')
+
+          // Fix buildAssetsDir in runtime config
+          html = html.replace(/buildAssetsDir:"\/_nuxt\/"/g, 'buildAssetsDir:"./_nuxt/"')
+
+          // Fix any remaining absolute /_nuxt/ references in JSON/JS
+          html = html.replace(/"\/_nuxt\//g, '"./_nuxt/')
 
           writeFileSync(filePath, html)
           console.log(`✓ [@haexhub/sdk] Base tag, polyfill, and relative paths applied to ${file}`)
