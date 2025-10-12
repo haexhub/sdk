@@ -57,13 +57,13 @@ export default defineNuxtModule<ModuleOptions>({
           }
         }
 
-        // Set baseURL and cdnURL if we have all required info
-        // cdnURL ensures all assets use the full path including extension info
+        // Set baseURL to relative path so Nuxt generates relative asset URLs
+        // The actual base path is injected via <base> tag in HTML at build time
         if (publicKey && /^[0-9a-f]{64}$/i.test(publicKey)) {
-          const baseURL = `/${publicKey}/${manifest.name}/${manifest.version}/`
-          nuxt.options.app.baseURL = baseURL
-          nuxt.options.app.cdnURL = baseURL
-          console.log(`✓ [@haexhub/sdk] Set app.baseURL and cdnURL to: ${baseURL}`)
+          // Use relative baseURL so assets become relative (e.g., _nuxt/... instead of /_nuxt/...)
+          nuxt.options.app.baseURL = './'
+          console.log(`✓ [@haexhub/sdk] Set app.baseURL to relative path (./) for base tag compatibility`)
+          console.log(`  Base tag will be: /${publicKey}/${manifest.name}/${manifest.version}/`)
         }
       }
     } catch (e) {
