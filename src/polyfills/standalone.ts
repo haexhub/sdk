@@ -8,11 +8,12 @@ import {
 } from './localStorage'
 import { installCookiePolyfill } from './cookies'
 import { installHistoryPolyfill } from './history'
-import { installBaseTag } from './baseTag'
 
 /**
  * Get the standalone polyfill code as a string
  * This is used by the Nuxt and Vite plugins to inject polyfills into HTML
+ *
+ * Note: Base tag is injected statically by the Vite plugin, not at runtime
  */
 export function getPolyfillCode(): string {
   // Convert functions to string and wrap in IIFE
@@ -33,8 +34,7 @@ export function getPolyfillCode(): string {
   // History API Polyfill
   (${installHistoryPolyfill.toString()})();
 
-  // Base Tag Polyfill (for SPA routing)
-  (${installBaseTag.toString()})();
+  // Note: Base tag is injected at build-time by Vite plugin, not at runtime
 
   console.log('[HaexHub] All polyfills loaded successfully');
 })();`

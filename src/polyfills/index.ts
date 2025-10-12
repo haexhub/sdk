@@ -22,12 +22,11 @@
 import { installLocalStoragePolyfill, installSessionStoragePolyfill } from './localStorage';
 import { installCookiePolyfill } from './cookies';
 import { installHistoryPolyfill } from './history';
-import { installBaseTag } from './baseTag';
 
 export { installLocalStoragePolyfill, installSessionStoragePolyfill } from './localStorage';
 export { installCookiePolyfill } from './cookies';
 export { installHistoryPolyfill } from './history';
-export { installBaseTag } from './baseTag';
+export { installBaseTag } from './baseTag'; // Export for backwards compatibility, but not used in auto-install
 export { installConsoleForwarding } from './consoleForwarding';
 
 /**
@@ -52,8 +51,8 @@ export function installPolyfills(): void {
   // Install history polyfill (waits for DOM ready internally)
   installHistoryPolyfill();
 
-  // Install base tag (waits for extension info from parent window)
-  installBaseTag();
+  // Note: Base tag is injected at build-time by Vite plugin, no runtime setup needed
+  // Runtime base tag setup is disabled to prevent conflicts
 
   // Note: Console forwarding is installed by HaexHubClient when debug mode is enabled
 
