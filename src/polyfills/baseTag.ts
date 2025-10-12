@@ -33,9 +33,12 @@ export function installBaseTag() {
     return
   }
 
-  // Check if base tag already exists
-  if (document.querySelector('base[href]')) {
-    console.log('[HaexHub] Base tag already exists, skipping')
+  // Find existing base tag (placeholder or already set)
+  const existingBaseTag = document.querySelector('base#haexhub-base') as HTMLBaseElement | null
+
+  // If base tag already has correct href (not just "/"), skip
+  if (existingBaseTag && existingBaseTag.href && existingBaseTag.href !== window.location.origin + '/') {
+    console.log('[HaexHub] Base tag already configured, skipping')
     return
   }
 
@@ -59,17 +62,26 @@ export function installBaseTag() {
         return
       }
 
-      // Create and inject base tag with new path structure
-      const baseTag = document.createElement('base')
-      baseTag.href = `/${extensionInfo.publicKey}/${extensionInfo.name}/${extensionInfo.version}/`
+      // Update existing base tag or create new one
+      const newHref = `/${extensionInfo.publicKey}/${extensionInfo.name}/${extensionInfo.version}/`
 
-      // Insert at the beginning of <head>
-      const head = document.head || document.querySelector('head')
-      if (head) {
-        head.insertBefore(baseTag, head.firstChild)
-        console.log(`[HaexHub] Base tag injected: ${baseTag.href}`)
+      if (existingBaseTag) {
+        // Update existing placeholder
+        existingBaseTag.href = newHref
+        console.log(`[HaexHub] Base tag updated: ${existingBaseTag.href}`)
       } else {
-        console.warn('[HaexHub] No <head> found, cannot inject base tag')
+        // Create new base tag (fallback if placeholder wasn't injected)
+        const baseTag = document.createElement('base')
+        baseTag.id = 'haexhub-base'
+        baseTag.href = newHref
+
+        const head = document.head || document.querySelector('head')
+        if (head) {
+          head.insertBefore(baseTag, head.firstChild)
+          console.log(`[HaexHub] Base tag created: ${baseTag.href}`)
+        } else {
+          console.warn('[HaexHub] No <head> found, cannot inject base tag')
+        }
       }
 
       // Clean up listener

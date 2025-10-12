@@ -63,11 +63,15 @@ export function haexhubPlugin(options: VitePluginOptions = {}): Plugin {
         }
 
         const insertPos = headPos + 6 // after <head>
+
+        // Add a placeholder base tag that will be filled by the polyfill
+        // This ensures the base tag exists before any assets are loaded
+        const baseTagPlaceholder = `<base href="/" id="haexhub-base">`
         const polyfillScript = `<script>${polyfillCode}</script>`
 
-        const modifiedHtml = html.slice(0, insertPos) + polyfillScript + html.slice(insertPos)
+        const modifiedHtml = html.slice(0, insertPos) + baseTagPlaceholder + polyfillScript + html.slice(insertPos)
 
-        console.log('✓ [@haexhub/sdk] Polyfill injected into HTML')
+        console.log('✓ [@haexhub/sdk] Base tag placeholder and polyfill injected into HTML')
 
         return modifiedHtml
       }
