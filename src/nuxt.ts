@@ -41,6 +41,7 @@ export default defineNuxtModule<ModuleOptions>({
 
         // Get polyfill code from modular polyfills
         const polyfillCode = getPolyfillCode()
+        const baseTagPlaceholder = `<base href="/" id="haexhub-base">`
         const polyfillScript = `<script>${polyfillCode}</script>`
 
         // Find all HTML files in the output directory
@@ -50,15 +51,15 @@ export default defineNuxtModule<ModuleOptions>({
           const filePath = join(distDir, file)
           let html = readFileSync(filePath, 'utf-8')
 
-          // Inject polyfill directly after <head>, BEFORE all other scripts
+          // Inject base tag placeholder and polyfill directly after <head>, BEFORE all other content
           const headPos = html.indexOf('<head>')
           if (headPos !== -1) {
             const insertPos = headPos + 6 // after <head>
-            html = html.slice(0, insertPos) + polyfillScript + html.slice(insertPos)
+            html = html.slice(0, insertPos) + baseTagPlaceholder + polyfillScript + html.slice(insertPos)
           }
 
           writeFileSync(filePath, html)
-          console.log(`✓ [@haexhub/sdk] Polyfill injected into ${file}`)
+          console.log(`✓ [@haexhub/sdk] Base tag placeholder and polyfill injected into ${file}`)
         }
       } catch (error: unknown) {
         console.error('[@haexhub/sdk] Failed to inject polyfill:', error)
