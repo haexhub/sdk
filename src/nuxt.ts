@@ -55,18 +55,41 @@ export default defineNuxtModule<ModuleOptions>({
         }
 
         if (!manifest) {
-          console.warn('[@haexhub/sdk] Could not read manifest.json - base tag will be set dynamically')
+          throw new Error('[@haexhub/sdk] ERROR: Could not find manifest.json in haextension/, public/, or root directory. Please create haextension/manifest.json with name, version, and public_key fields.')
+        }
+
+        // Validate required fields
+        if (!manifest.name) {
+          throw new Error('[@haexhub/sdk] ERROR: manifest.json is missing required field "name"')
+        }
+
+        if (!manifest.version) {
+          throw new Error('[@haexhub/sdk] ERROR: manifest.json is missing required field "version"')
         }
 
         // Read public_key from haextension/public.key if not in manifest
-        if (manifest && !manifest.public_key) {
+        if (!manifest.public_key) {
           const publicKeyPath = resolve(nuxt.options.rootDir, 'haextension', 'public.key')
           try {
             const publicKey = readFileSync(publicKeyPath, 'utf-8').trim()
+
+            // Validate public key format (should be 64 hex characters)
+            if (!/^[0-9a-f]{64}$/i.test(publicKey)) {
+              throw new Error(`[@haexhub/sdk] ERROR: Invalid public_key format in ${publicKeyPath}. Expected 64 hexadecimal characters, got: ${publicKey}`)
+            }
+
             manifest.public_key = publicKey
             console.log(`[@haexhub/sdk] Loaded public_key from: ${publicKeyPath}`)
           } catch (e) {
-            console.warn('[@haexhub/sdk] Could not read haextension/public.key')
+            if (e instanceof Error && e.message.includes('ERROR:')) {
+              throw e // Re-throw validation errors
+            }
+            throw new Error('[@haexhub/sdk] ERROR: Could not read haextension/public.key - this file is required for building extensions')
+          }
+        } else {
+          // Validate public_key format if provided in manifest
+          if (!/^[0-9a-f]{64}$/i.test(manifest.public_key)) {
+            throw new Error(`[@haexhub/sdk] ERROR: Invalid public_key format in manifest.json. Expected 64 hexadecimal characters, got: ${manifest.public_key}`)
           }
         }
 
@@ -80,16 +103,9 @@ export default defineNuxtModule<ModuleOptions>({
         const polyfillCode = getPolyfillCode()
         const polyfillScript = `<script>${polyfillCode}</script>`
 
-        // If we have manifest info, create base tag with correct path
-        // Otherwise use placeholder that will be updated at runtime
-        let baseTag: string
-        if (manifest?.public_key && manifest?.name && manifest?.version) {
-          baseTag = `<base href="/${manifest.public_key}/${manifest.name}/${manifest.version}/" id="haexhub-base">`
-          console.log(`✓ [@haexhub/sdk] Using static base tag from manifest: /${manifest.public_key}/${manifest.name}/${manifest.version}/`)
-        } else {
-          baseTag = `<base href="/" id="haexhub-base">`
-          console.log('[@haexhub/sdk] Using dynamic base tag (will be set at runtime)')
-        }
+        // Create base tag with correct path (all fields are now validated)
+        const baseTag = `<base href="/${manifest.public_key}/${manifest.name}/${manifest.version}/" id="haexhub-base">`
+        console.log(`✓ [@haexhub/sdk] Using static base tag: /${manifest.public_key}/${manifest.name}/${manifest.version}/`)
 
         // Find all HTML files in the output directory
         const htmlFiles = readdirSync(distDir).filter((f: string) => f.endsWith('.html'))
