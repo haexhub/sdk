@@ -75,10 +75,15 @@ export default defineNuxtModule<ModuleOptions>({
           nuxt.options.experimental = nuxt.options.experimental || {}
           nuxt.options.experimental.appManifest = false
 
+          // Disable payload extraction for SPAs (extensions don't need SSR payload)
+          // This prevents "Cannot load payload" errors for _payload.json files
+          nuxt.options.experimental.payloadExtraction = false
+
           console.log(`✓ [@haexhub/sdk] Set app.baseURL to relative path (./) for base tag compatibility`)
           console.log(`✓ [@haexhub/sdk] Set buildAssetsDir to relative path (_nuxt/)`)
           console.log(`✓ [@haexhub/sdk] Set vite.base to relative path (./)`)
           console.log(`✓ [@haexhub/sdk] Disabled appManifest (not needed for extensions)`)
+          console.log(`✓ [@haexhub/sdk] Disabled payloadExtraction (not needed for SPAs)`)
           console.log(`  Base tag will be: /${publicKey}/${manifest.name}/${manifest.version}/`)
         }
       }
