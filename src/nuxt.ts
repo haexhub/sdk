@@ -70,9 +70,15 @@ export default defineNuxtModule<ModuleOptions>({
           nuxt.options.vite = nuxt.options.vite || {}
           nuxt.options.vite.base = './'
 
+          // Disable app manifest feature (generates /_nuxt/builds/meta/*.json)
+          // This is not needed for extensions and causes 404 errors with relative paths
+          nuxt.options.experimental = nuxt.options.experimental || {}
+          nuxt.options.experimental.appManifest = false
+
           console.log(`✓ [@haexhub/sdk] Set app.baseURL to relative path (./) for base tag compatibility`)
           console.log(`✓ [@haexhub/sdk] Set buildAssetsDir to relative path (_nuxt/)`)
           console.log(`✓ [@haexhub/sdk] Set vite.base to relative path (./)`)
+          console.log(`✓ [@haexhub/sdk] Disabled appManifest (not needed for extensions)`)
           console.log(`  Base tag will be: /${publicKey}/${manifest.name}/${manifest.version}/`)
         }
       }
