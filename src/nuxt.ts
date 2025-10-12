@@ -42,13 +42,11 @@ export default defineNuxtModule<ModuleOptions>({
         ]
 
         let manifest: { public_key?: string; name?: string; version?: string } | null = null
-        let manifestSource = ''
 
         for (const manifestPath of possiblePaths) {
           try {
             const manifestContent = readFileSync(manifestPath, 'utf-8')
             manifest = JSON.parse(manifestContent)
-            manifestSource = manifestPath
             console.log(`[@haexhub/sdk] Found manifest at: ${manifestPath}`)
             break
           } catch (e) {
