@@ -42,30 +42,26 @@ export default defineNuxtModule<ModuleOptions>({
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       };
 
-      // Inject polyfills in dev mode via Vite plugin
+      // Inject polyfills in dev mode via Nitro hook (same approach as production)
       if (options.injectPolyfills) {
-        nuxt.options.vite.plugins = nuxt.options.vite.plugins || [];
-        nuxt.options.vite.plugins.push({
-          name: "haexhub-polyfill-dev",
-          transformIndexHtml(html: string) {
+        nuxt.hook("nitro:config", (nitroConfig: any) => {
+          nitroConfig.hooks = nitroConfig.hooks || {};
+          nitroConfig.hooks["render:html"] =
+            nitroConfig.hooks["render:html"] || [];
+
+          // Add hook to inject polyfills in dev mode
+          nitroConfig.hooks["render:html"].push((html: any) => {
             const polyfillCode = getPolyfillCode();
             const polyfillScript = `<script>${polyfillCode}</script>`;
 
-            // Inject after <head>
-            const headPos = html.indexOf("<head>");
-            if (headPos !== -1) {
-              const insertPos = headPos + 6;
-              return (
-                html.slice(0, insertPos) +
-                polyfillScript +
-                html.slice(insertPos)
-              );
+            // Inject polyfill directly after <head>
+            if (html.head && Array.isArray(html.head)) {
+              html.head.unshift(polyfillScript);
             }
-            return html;
-          },
+          });
         });
         console.log(
-          "✓ [@haexhub/sdk] Dev mode: Polyfills enabled via Vite plugin"
+          "✓ [@haexhub/sdk] Dev mode: Polyfills enabled via Nitro hook"
         );
       }
 
