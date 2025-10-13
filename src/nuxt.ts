@@ -25,13 +25,32 @@ export default defineNuxtModule<ModuleOptions>({
   setup(options: ModuleOptions) {
     const nuxt = useNuxt()
 
-    // Configure Nuxt for extension build
-    // Use relative paths (no base tag needed with simplified URL format)
-    nuxt.options.app.baseURL = './'
-    nuxt.options.app.buildAssetsDir = '_nuxt/' // Remove leading slash
+    // Configure Nuxt differently for dev vs production
+    if (nuxt.options.dev) {
+      // DEV MODE: Use absolute paths for dev server
+      nuxt.options.app.baseURL = '/'
+      nuxt.options.app.buildAssetsDir = '/_nuxt/'
 
-    // IMPORTANT: Set vite.base to './' to generate truly relative asset paths
-  
+      // Enable CORS for dev server
+      nuxt.options.vite = nuxt.options.vite || {}
+      nuxt.options.vite.server = nuxt.options.vite.server || {}
+      nuxt.options.vite.server.cors = true
+      nuxt.options.vite.server.headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
+
+      console.log('✓ [@haexhub/sdk] Dev mode: Set app.baseURL to / (absolute paths for dev server)')
+      console.log('✓ [@haexhub/sdk] Dev mode: Enabled CORS headers')
+    } else {
+      // PRODUCTION BUILD: Use relative paths
+      nuxt.options.app.baseURL = './'
+      nuxt.options.app.buildAssetsDir = '_nuxt/' // Remove leading slash
+
+      console.log('✓ [@haexhub/sdk] Build mode: Set app.baseURL to relative path (./)')
+      console.log('✓ [@haexhub/sdk] Build mode: Set buildAssetsDir to relative path (_nuxt/)')
+    }
 
     // Disable app manifest feature (generates /_nuxt/builds/meta/*.json)
     // This is not needed for extensions and causes 404 errors
@@ -42,9 +61,6 @@ export default defineNuxtModule<ModuleOptions>({
     // This prevents "Cannot load payload" errors for _payload.json files
     nuxt.options.experimental.payloadExtraction = false
 
-    console.log('✓ [@haexhub/sdk] Set app.baseURL to relative path (./)')
-    console.log('✓ [@haexhub/sdk] Set buildAssetsDir to relative path (_nuxt/)')
-    console.log('✓ [@haexhub/sdk] Set vite.base to relative path (./)')
     console.log('✓ [@haexhub/sdk] Disabled appManifest (not needed for extensions)')
     console.log('✓ [@haexhub/sdk] Disabled payloadExtraction (not needed for SPAs)')
 
