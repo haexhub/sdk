@@ -105,30 +105,22 @@ program
         console.log("✓ Created .gitignore");
       }
 
-      // 5. Create haextension.config.ts (optional build config)
-      const configContent = `// HaexHub Extension Configuration
-export default {
-  // The directory to use as the extension source (e.g., 'dist' after build)
-  distDir: 'dist',
+      // 5. Create haextension.json config
+      const config = {
+        dev: {
+          port: 5173,
+          host: "localhost",
+        },
+        build: {
+          distDir: "dist",
+        },
+      };
 
-  // Dev server configuration
-  dev: {
-    port: 5173,
-    host: 'localhost',
-  },
-
-  // Build configuration
-  build: {
-    // Output directory relative to project root
-    outDir: 'dist',
-  },
-};
-`;
       await fs.writeFile(
-        path.join(cwd, "haextension.config.ts"),
-        configContent
+        path.join(cwd, "haextension.json"),
+        JSON.stringify(config, null, 2)
       );
-      console.log("✓ Created haextension.config.ts");
+      console.log("✓ Created haextension.json");
 
       // 6. Update package.json scripts
       if (existsSync(packageJsonPath)) {
