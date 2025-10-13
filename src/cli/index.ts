@@ -5,6 +5,7 @@ import { Command } from "commander";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { ExtensionSigner } from "~/crypto/signing";
+import { existsSync } from "fs";
 
 const program = new Command();
 
@@ -12,6 +13,151 @@ program
   .name("haexhub")
   .description("HaexHub Extension Development Tools")
   .version("1.0.0");
+
+program
+  .command("init")
+  .description("Initialize a new HaexHub extension in your project")
+  .option("-n, --name <name>", "Extension name")
+  .option("-d, --description <desc>", "Extension description")
+  .option("--author <author>", "Extension author")
+  .option("--dir <dir>", "Extension directory", "./haextension")
+  .action(async (options) => {
+    try {
+      const cwd = process.cwd();
+      const extDir = path.resolve(cwd, options.dir);
+
+      // Check if haextension directory already exists
+      if (existsSync(extDir)) {
+        console.error(`❌ Directory ${options.dir} already exists!`);
+        process.exit(1);
+      }
+
+      // Read package.json if it exists
+      let packageJson: any = {};
+      const packageJsonPath = path.join(cwd, "package.json");
+      if (existsSync(packageJsonPath)) {
+        const content = await fs.readFile(packageJsonPath, "utf-8");
+        packageJson = JSON.parse(content);
+      }
+
+      // Determine extension name
+      const extensionName =
+        options.name ||
+        packageJson.name ||
+        path.basename(cwd).replace(/[^a-z0-9-]/gi, "-").toLowerCase();
+
+      console.log("🚀 Initializing HaexHub Extension...\n");
+
+      // 1. Create haextension directory
+      await fs.mkdir(extDir, { recursive: true });
+      console.log(`✓ Created directory: ${options.dir}`);
+
+      // 2. Generate keypair
+      const { publicKey, privateKey } = await ExtensionSigner.generateKeypair();
+      await fs.writeFile(path.join(extDir, "public.key"), publicKey);
+      await fs.writeFile(path.join(extDir, "private.key"), privateKey);
+      console.log("✓ Generated keypair");
+
+      // 3. Create manifest.json
+      const manifest = {
+        name: extensionName,
+        version: packageJson.version || "0.1.0",
+        author: options.author || packageJson.author || "Your Name",
+        description:
+          options.description ||
+          packageJson.description ||
+          "A HaexHub extension",
+        entry: "index.html",
+        icon: "icon.png",
+        public_key: publicKey,
+        signature: "",
+        permissions: {
+          database: [],
+          filesystem: [],
+          http: [],
+          shell: [],
+        },
+        homepage: packageJson.homepage || null,
+      };
+
+      await fs.writeFile(
+        path.join(extDir, "manifest.json"),
+        JSON.stringify(manifest, null, 2)
+      );
+      console.log("✓ Created manifest.json");
+
+      // 4. Create/update .gitignore
+      const gitignorePath = path.join(cwd, ".gitignore");
+      const gitignoreEntries = [
+        "\n# HaexHub Extension",
+        `${options.dir}/private.key`,
+        "*.haextension",
+      ];
+
+      if (existsSync(gitignorePath)) {
+        const existing = await fs.readFile(gitignorePath, "utf-8");
+        if (!existing.includes(`${options.dir}/private.key`)) {
+          await fs.appendFile(gitignorePath, gitignoreEntries.join("\n"));
+          console.log("✓ Updated .gitignore");
+        }
+      } else {
+        await fs.writeFile(gitignorePath, gitignoreEntries.join("\n"));
+        console.log("✓ Created .gitignore");
+      }
+
+      // 5. Create haextension.config.ts (optional build config)
+      const configContent = `// HaexHub Extension Configuration
+export default {
+  // The directory to use as the extension source (e.g., 'dist' after build)
+  distDir: 'dist',
+
+  // Dev server configuration
+  dev: {
+    port: 5173,
+    host: 'localhost',
+  },
+
+  // Build configuration
+  build: {
+    // Output directory relative to project root
+    outDir: 'dist',
+  },
+};
+`;
+      await fs.writeFile(
+        path.join(cwd, "haextension.config.ts"),
+        configContent
+      );
+      console.log("✓ Created haextension.config.ts");
+
+      // 6. Update package.json scripts
+      if (existsSync(packageJsonPath)) {
+        packageJson.scripts = packageJson.scripts || {};
+        packageJson.scripts["ext:dev"] =
+          packageJson.scripts["ext:dev"] || "haexhub dev";
+        packageJson.scripts["ext:build"] =
+          packageJson.scripts["ext:build"] ||
+          `${packageJson.scripts.build || "vite build"} && haexhub sign dist -k ${options.dir}/private.key`;
+
+        await fs.writeFile(
+          packageJsonPath,
+          JSON.stringify(packageJson, null, 2)
+        );
+        console.log("✓ Updated package.json scripts");
+      }
+
+      console.log("\n✨ Extension initialized successfully!\n");
+      console.log("📝 Next steps:");
+      console.log("  1. Edit haextension/manifest.json to configure your extension");
+      console.log("  2. Run 'npm run ext:dev' to start development mode");
+      console.log("  3. Run 'npm run ext:build' to build and sign your extension");
+      console.log("\n⚠️  Important: Never commit haextension/private.key!");
+      console.log("   It has been added to .gitignore automatically.\n");
+    } catch (error) {
+      console.error("❌ Error:", error);
+      process.exit(1);
+    }
+  });
 
 program
   .command("keygen")

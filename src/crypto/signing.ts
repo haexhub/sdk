@@ -152,7 +152,7 @@ export class ExtensionSigner {
 
     // 6. Das Verzeichnis (das jetzt die finale manifest.json enthält) zippen
     const finalOutputPath =
-      outputPath || `${manifest.id}-${manifest.version}.haextension`;
+      outputPath || `${manifest.name}-${manifest.version}.haextension`;
     const output = fsSync.createWriteStream(finalOutputPath);
     const archive = archiver("zip", { zlib: { level: 9 } });
 
