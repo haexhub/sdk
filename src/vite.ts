@@ -5,6 +5,7 @@
  */
 import type { Plugin } from 'vite'
 import { getPolyfillCode } from './polyfills/standalone'
+import { applyCorsHeaders } from './cors'
 
 export interface VitePluginOptions {
   /**
@@ -12,6 +13,12 @@ export interface VitePluginOptions {
    * @default true
    */
   injectPolyfills?: boolean
+
+  /**
+   * Configure CORS for dev server
+   * @default true
+   */
+  configureCors?: boolean
 }
 
 /**
@@ -29,7 +36,7 @@ export interface VitePluginOptions {
  * ```
  */
 export function haexhubPlugin(options: VitePluginOptions = {}): Plugin {
-  const { injectPolyfills = true } = options
+  const { injectPolyfills = true, configureCors = true } = options
 
   let polyfillCode: string | null = null
 
@@ -37,17 +44,43 @@ export function haexhubPlugin(options: VitePluginOptions = {}): Plugin {
     name: '@haexhub/sdk',
     enforce: 'post', // Run after other plugins
 
-    configResolved() {
-      if (!injectPolyfills) return
-
-      try {
-        // Get polyfill code from modular polyfills
-        polyfillCode = getPolyfillCode()
-        console.log('✓ [@haexhub/sdk] Polyfills initialized')
-      } catch (error) {
-        console.error('[@haexhub/sdk] Failed to initialize:', error)
-        throw error
+    configResolved(config) {
+      if (injectPolyfills) {
+        try {
+          // Get polyfill code from modular polyfills
+          polyfillCode = getPolyfillCode()
+          console.log('✓ [@haexhub/sdk] Polyfills initialized')
+        } catch (error) {
+          console.error('[@haexhub/sdk] Failed to initialize:', error)
+          throw error
+        }
       }
+
+      // Log CORS configuration
+      if (configureCors && config.command === 'serve') {
+        console.log('✓ [@haexhub/sdk] CORS configured for HaexHub development')
+        console.log('  - Allowing all origins (required for custom protocols)')
+        console.log('  - Allowing credentials')
+      }
+    },
+
+    configureServer(server) {
+      if (!configureCors) return
+
+      // Add CORS middleware for HaexHub using shared CORS configuration
+      server.middlewares.use((req, res, next) => {
+        // Apply CORS headers (allows custom protocols like haex-extension://)
+        applyCorsHeaders(res, req.headers.origin)
+
+        // Handle preflight requests
+        if (req.method === 'OPTIONS') {
+          res.statusCode = 200
+          res.end()
+          return
+        }
+
+        next()
+      })
     },
 
     transformIndexHtml: {

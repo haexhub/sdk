@@ -6,6 +6,7 @@ import { defineNuxtModule, useNuxt } from "@nuxt/kit";
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { getPolyfillCode } from "./polyfills/standalone";
+import { getCorsHeaders } from "./cors";
 
 export interface ModuleOptions {
   injectPolyfills?: boolean;
@@ -31,16 +32,11 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt.options.app.baseURL = "/";
       nuxt.options.app.buildAssetsDir = "/_nuxt/";
 
-      // Enable CORS for dev server
+      // Enable CORS for dev server using shared CORS configuration
       nuxt.options.vite = nuxt.options.vite || {};
       nuxt.options.vite.server = nuxt.options.vite.server || {};
       nuxt.options.vite.server.cors = true;
-      nuxt.options.vite.server.headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods":
-          "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      };
+      nuxt.options.vite.server.headers = getCorsHeaders();
 
       // Inject polyfills in dev mode via Nitro hook (same approach as production)
       if (options.injectPolyfills) {
