@@ -39,25 +39,27 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt.options.vite.server.headers = getCorsHeaders();
 
       // Inject polyfills in dev mode via Nitro hook (same approach as production)
+      // IMPORTANT: Use unshift to ensure polyfills load BEFORE Vite client
       if (options.injectPolyfills) {
         nuxt.hook("nitro:config", (nitroConfig: any) => {
           nitroConfig.hooks = nitroConfig.hooks || {};
           nitroConfig.hooks["render:html"] =
             nitroConfig.hooks["render:html"] || [];
 
-          // Add hook to inject polyfills in dev mode
-          nitroConfig.hooks["render:html"].push((html: any) => {
+          // Use unshift instead of push to run FIRST (before Vite transforms)
+          nitroConfig.hooks["render:html"].unshift((html: any) => {
             const polyfillCode = getPolyfillCode();
-            const polyfillScript = `<script>${polyfillCode}</script>`;
+            // Inject as inline script with highest priority
+            const polyfillScript = `<script data-haexhub-polyfill>${polyfillCode}</script>`;
 
-            // Inject polyfill directly after <head>
+            // Inject at the very beginning of <head>
             if (html.head && Array.isArray(html.head)) {
               html.head.unshift(polyfillScript);
             }
           });
         });
         console.log(
-          "✓ [@haexhub/sdk] Dev mode: Polyfills enabled via Nitro hook"
+          "✓ [@haexhub/sdk] Dev mode: Polyfills enabled with priority injection"
         );
       }
 
