@@ -23,8 +23,32 @@ export default defineNuxtModule<ModuleOptions>({
   defaults: {
     injectPolyfills: true,
   },
-  setup(options: ModuleOptions) {
+  async setup(options: ModuleOptions) {
     const nuxt = useNuxt();
+
+    // CRITICAL: Install polyfill hook BEFORE any other module
+    // This ensures polyfills load before color-mode or any other script
+    if (options.injectPolyfills && nuxt.options.dev) {
+      nuxt.hook("nitro:config", (nitroConfig: any) => {
+        nitroConfig.hooks = nitroConfig.hooks || {};
+        nitroConfig.hooks["render:html"] =
+          nitroConfig.hooks["render:html"] || [];
+
+        // Prepend (unshift) to run before ALL other hooks
+        const polyfillCode = getPolyfillCode();
+        const polyfillScript = `<script data-haexhub-polyfill>${polyfillCode}</script>`;
+
+        nitroConfig.hooks["render:html"].unshift((html: any) => {
+          // Inject at the very beginning of <head>
+          if (html.head && Array.isArray(html.head)) {
+            html.head.unshift(polyfillScript);
+          }
+        });
+      });
+      console.log(
+        "✓ [@haexhub/sdk] Dev mode: Priority polyfill injection configured"
+      );
+    }
 
     // Configure Nuxt differently for dev vs production
     if (nuxt.options.dev) {
@@ -37,31 +61,6 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt.options.vite.server = nuxt.options.vite.server || {};
       nuxt.options.vite.server.cors = true;
       nuxt.options.vite.server.headers = getCorsHeaders();
-
-      // Inject polyfills in dev mode via Nitro hook (same approach as production)
-      // IMPORTANT: Use unshift to ensure polyfills load BEFORE Vite client
-      if (options.injectPolyfills) {
-        nuxt.hook("nitro:config", (nitroConfig: any) => {
-          nitroConfig.hooks = nitroConfig.hooks || {};
-          nitroConfig.hooks["render:html"] =
-            nitroConfig.hooks["render:html"] || [];
-
-          // Use unshift instead of push to run FIRST (before Vite transforms)
-          nitroConfig.hooks["render:html"].unshift((html: any) => {
-            const polyfillCode = getPolyfillCode();
-            // Inject as inline script with highest priority
-            const polyfillScript = `<script data-haexhub-polyfill>${polyfillCode}</script>`;
-
-            // Inject at the very beginning of <head>
-            if (html.head && Array.isArray(html.head)) {
-              html.head.unshift(polyfillScript);
-            }
-          });
-        });
-        console.log(
-          "✓ [@haexhub/sdk] Dev mode: Polyfills enabled with priority injection"
-        );
-      }
 
       console.log(
         "✓ [@haexhub/sdk] Dev mode: Set app.baseURL to / (absolute paths for dev server)"
