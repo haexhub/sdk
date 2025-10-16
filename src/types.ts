@@ -1,6 +1,6 @@
 // Constants
-export const KEY_HASH_LENGTH = 20; // 20 hex chars = 80 bits
 export const DEFAULT_TIMEOUT = 30000; // 30 seconds in milliseconds
+export const TABLE_SEPARATOR = "__"; // Separator for table name components: {publicKey}__{extensionName}__{tableName}
 
 // Core Protocol Types
 export interface HaexHubRequest {
@@ -23,9 +23,8 @@ export interface HaexHubError {
 
 // Extension Info (provided by HaexHub at runtime)
 export interface ExtensionInfo {
-  keyHash: string;
+  publicKey: string;
   name: string;
-  fullId: string;
   version: string;
   displayName?: string;
   namespace?: string;
@@ -36,7 +35,18 @@ export interface ExtensionInfo {
 export interface ApplicationContext {
   theme: "light" | "dark" | "system";
   locale: string;
-  platform: "desktop" | "mobile" | "tablet";
+  platform:
+    | "linux"
+    | "macos"
+    | "ios"
+    | "freebsd"
+    | "dragonfly"
+    | "netbsd"
+    | "openbsd"
+    | "solaris"
+    | "android"
+    | "windows"
+    | undefined;
 }
 
 // Search Types
@@ -152,7 +162,7 @@ export enum ErrorCode {
   PERMISSION_DENIED = "PERMISSION_DENIED",
 
   // Validation Errors
-  INVALID_KEY_HASH = "INVALID_KEY_HASH",
+  INVALID_PUBLIC_KEY = "INVALID_PUBLIC_KEY",
   INVALID_EXTENSION_NAME = "INVALID_EXTENSION_NAME",
   INVALID_TABLE_NAME = "INVALID_TABLE_NAME",
   INVALID_PARAMS = "INVALID_PARAMS",

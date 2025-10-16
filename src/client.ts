@@ -13,8 +13,8 @@ import type {
 } from "./types";
 import {
   ErrorCode,
-  KEY_HASH_LENGTH,
   DEFAULT_TIMEOUT,
+  TABLE_SEPARATOR,
   HaexHubError,
 } from "./types";
 import { DatabaseAPI } from "./api/database";
@@ -90,57 +90,43 @@ export class HaexHubClient {
 
     this.validateTableName(tableName);
 
-    const { keyHash, name } = this._extensionInfo;
-    const namePrefix = name.replace(/-/g, "_");
+    const { publicKey, name } = this._extensionInfo;
+    const extensionName = name;
 
-    return `${keyHash}_${namePrefix}_${tableName}`;
+    return `${publicKey}${TABLE_SEPARATOR}${extensionName}${TABLE_SEPARATOR}${tableName}`;
   }
 
   public getDependencyTableName(
-    keyHash: string,
+    publicKey: string,
     extensionName: string,
     tableName: string
   ): string {
-    this.validateKeyHash(keyHash);
+    this.validatePublicKey(publicKey);
     this.validateExtensionName(extensionName);
     this.validateTableName(tableName);
 
-    const namePrefix = extensionName.replace(/-/g, "_");
-
-    return `${keyHash}_${namePrefix}_${tableName}`;
+    return `${publicKey}${TABLE_SEPARATOR}${extensionName}${TABLE_SEPARATOR}${tableName}`;
   }
 
   public parseTableName(fullTableName: string): {
-    keyHash: string;
+    publicKey: string;
     extensionName: string;
     tableName: string;
   } | null {
-    const parts = fullTableName.split("_");
+    const parts = fullTableName.split(TABLE_SEPARATOR);
 
-    if (parts.length < 3) {
+    if (parts.length !== 3) {
       return null;
     }
 
-    const keyHash = parts[0];
-    const keyHashPattern = new RegExp(`^[a-f0-9]{${KEY_HASH_LENGTH}}$`, "i");
-    if (!keyHash || !keyHashPattern.test(keyHash)) {
+    const [publicKey, extensionName, tableName] = parts;
+
+    if (!publicKey || !extensionName || !tableName) {
       return null;
     }
-
-    const tableName = parts[parts.length - 1];
-    if (!tableName) {
-      return null;
-    }
-
-    const extensionNameParts = parts.slice(1, -1);
-    if (extensionNameParts.length === 0) {
-      return null;
-    }
-
-    const extensionName = extensionNameParts.join("-");
 
     return {
-      keyHash,
+      publicKey,
       extensionName,
       tableName,
     };
@@ -213,10 +199,7 @@ export class HaexHubClient {
       console.log("[SDK Debug] Extension info:", this._extensionInfo);
       console.log("[SDK Debug] ========================================");
 
-      window.parent.postMessage(
-        { id: requestId, ...request },
-        targetOrigin
-      );
+      window.parent.postMessage({ id: requestId, ...request }, targetOrigin);
     });
   }
 
@@ -289,12 +272,24 @@ export class HaexHubClient {
   private handleMessage(event: MessageEvent): void {
     console.log("[SDK Debug] ========== Message Received ==========");
     console.log("[SDK Debug] Event origin:", event.origin);
-    console.log("[SDK Debug] Event source:", event.source === window.parent ? "parent window" : "unknown");
+    console.log(
+      "[SDK Debug] Event source:",
+      event.source === window.parent ? "parent window" : "unknown"
+    );
     console.log("[SDK Debug] Event data:", event.data);
     console.log("[SDK Debug] Extension info loaded:", !!this._extensionInfo);
-    console.log("[SDK Debug] Allowed origin:", this._extensionInfo?.allowedOrigin);
-    console.log("[SDK Debug] Origins match:", event.origin === this._extensionInfo?.allowedOrigin);
-    console.log("[SDK Debug] Pending requests count:", this.pendingRequests.size);
+    console.log(
+      "[SDK Debug] Allowed origin:",
+      this._extensionInfo?.allowedOrigin
+    );
+    console.log(
+      "[SDK Debug] Origins match:",
+      event.origin === this._extensionInfo?.allowedOrigin
+    );
+    console.log(
+      "[SDK Debug] Pending requests count:",
+      this.pendingRequests.size
+    );
 
     if (
       this._extensionInfo &&
@@ -325,8 +320,14 @@ export class HaexHubClient {
     }
 
     if ("id" in data && !this.pendingRequests.has(data.id)) {
-      console.warn("[SDK Debug] ⚠️ Received response for unknown request ID:", data.id);
-      console.warn("[SDK Debug] Known IDs:", Array.from(this.pendingRequests.keys()));
+      console.warn(
+        "[SDK Debug] ⚠️ Received response for unknown request ID:",
+        data.id
+      );
+      console.warn(
+        "[SDK Debug] Known IDs:",
+        Array.from(this.pendingRequests.keys())
+      );
     }
 
     if ("type" in data && data.type) {
@@ -360,13 +361,12 @@ export class HaexHubClient {
     return `req_${++this.requestCounter}`;
   }
 
-  private validateKeyHash(keyHash: string): void {
-    const keyHashPattern = new RegExp(`^[a-f0-9]{${KEY_HASH_LENGTH}}$`, "i");
-    if (!keyHash || !keyHashPattern.test(keyHash)) {
+  private validatePublicKey(publicKey: string): void {
+    if (!publicKey || typeof publicKey !== "string" || publicKey.trim() === "") {
       throw new HaexHubError(
-        ErrorCode.INVALID_KEY_HASH,
-        "errors.invalid_key_hash",
-        { keyHash, expectedLength: KEY_HASH_LENGTH }
+        ErrorCode.INVALID_PUBLIC_KEY,
+        "errors.invalid_public_key",
+        { publicKey }
       );
     }
   }
@@ -379,6 +379,14 @@ export class HaexHubClient {
         { extensionName }
       );
     }
+
+    if (extensionName.includes(TABLE_SEPARATOR)) {
+      throw new HaexHubError(
+        ErrorCode.INVALID_EXTENSION_NAME,
+        "errors.extension_name_contains_separator",
+        { extensionName, separator: TABLE_SEPARATOR }
+      );
+    }
   }
 
   private validateTableName(tableName: string): void {
@@ -389,15 +397,15 @@ export class HaexHubClient {
       );
     }
 
-    if (tableName.includes("_")) {
+    if (tableName.includes(TABLE_SEPARATOR)) {
       throw new HaexHubError(
         ErrorCode.INVALID_TABLE_NAME,
-        "errors.table_name_underscore",
-        { tableName }
+        "errors.table_name_contains_separator",
+        { tableName, separator: TABLE_SEPARATOR }
       );
     }
 
-    if (!/^[a-z][a-z0-9-]*$/i.test(tableName)) {
+    if (!/^[a-z][a-z0-9-_]*$/i.test(tableName)) {
       throw new HaexHubError(
         ErrorCode.INVALID_TABLE_NAME,
         "errors.table_name_format",

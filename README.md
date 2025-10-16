@@ -37,7 +37,7 @@ watch(() => extensionInfo.value, (info) => {
 });
 
 // Create your own table - no permissions needed!
-// Tables are automatically namespaced with your extension's keyHash
+// Tables are automatically namespaced with your extension's publicKey
 const tableName = getTableName('users');
 await db.createTable(tableName, `
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,7 +91,7 @@ function App() {
 
     async function initializeDatabase() {
       // Create your own table - no permissions needed!
-      // Tables are automatically namespaced with your extension's keyHash
+      // Tables are automatically namespaced with your extension's publicKey
       const tableName = getTableName('users');
 
       await db.createTable(tableName, `
@@ -161,7 +161,7 @@ npm install @haexhub/sdk
 
   onMount(async () => {
     // Create your own table - no permissions needed!
-    // Tables are automatically namespaced with your extension's keyHash
+    // Tables are automatically namespaced with your extension's publicKey
     const tableName = haexHub.getTableName('users');
 
     await haexHub.db.createTable(tableName, `
@@ -212,7 +212,7 @@ client.subscribe(() => {
 });
 
 // Create your own table - no permissions needed!
-// Tables are automatically namespaced with your extension's keyHash
+// Tables are automatically namespaced with your extension's publicKey
 const tableName = client.getTableName('users');
 await client.db.createTable(tableName, `
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -281,11 +281,11 @@ You can build your extension using **any framework and any libraries** without w
 
 ### 1. Cryptographic Identity
 
-Each extension is identified by a **public key hash** (20 hex characters = 80 bits), not by name or namespace.
+Each extension is identified by a **public key**, not by name or namespace.
 
 ```typescript
-// Extension ID format: {keyHash}_{name}_{version}
-// Example: a7f3b2c1d4e5f6a8b9c0_password-manager_1.0.0
+// Extension ID format: {publicKey}_{name}_{version}
+// Example: MCowBQYDK2VwAyEA7x8Z9Kq3mN2pL5tR8vW4yB6cE1fH3gJ9kM7nP0qS2uV_password-manager_1.0.0
 ```
 
 **Benefits:**
@@ -300,8 +300,17 @@ All tables are automatically prefixed with your extension's identity:
 
 ```typescript
 const tableName = client.getTableName("users");
-// Result: "a7f3b2c1d4e5f6a8b9c0_my_extension_users"
+// Result: "MCowBQYDK2VwAyEA7x8Z9Kq3mN2pL5tR8vW4yB6cE1fH3gJ9kM7nP0qS2uV__my-extension__users"
 ```
+
+**Naming Rules:**
+- Extension names and table names must start with a letter (a-z, A-Z)
+- Can contain letters, numbers, hyphens (`-`), and underscores (`_`)
+- **Cannot contain** double underscores (`__`) - reserved as separator
+- **Cannot contain** dots (`.`) - causes issues with SQL schema qualification
+- Must follow npm package naming conventions
+
+**Format:** `{publicKey}__{extensionName}__{tableName}`
 
 **Own tables:** Automatic full read/write access
 **Dependency tables:** Requires explicit permission
@@ -325,7 +334,7 @@ await client.db.delete(myTable, 'id = ?', [1]);  // ✅ Delete
 ```
 
 **Why this is safe:**
-- Tables are automatically prefixed with your `keyHash` (e.g., `a7f3b2c1d4e5f6a8b9c0_myext_users`)
+- Tables are automatically prefixed with your `publicKey` (e.g., `MCowBQYDK2VwAyEA7x8Z9Kq3mN2pL5tR8vW4yB6cE1fH3gJ9kM7nP0qS2uV__myext__users`)
 - Impossible to access other extensions' tables
 - Complete sandbox isolation
 - No manifest declarations required
@@ -339,7 +348,7 @@ To access **another extension's tables**, you must declare it in your manifest:
 {
   "dependencies": [
     {
-      "keyHash": "a7f3b2c1d4e5f6a8b9c0",
+      "publicKey": "MCowBQYDK2VwAyEA7x8Z9Kq3mN2pL5tR8vW4yB6cE1fH3gJ9kM7nP0qS2uV",
       "name": "password-manager",
       "minVersion": "1.0.0",
       "reason": "Access stored credentials",
@@ -465,9 +474,8 @@ unsubscribe();
 // Get your extension's info
 const info = client.extensionInfo;
 // {
-//   keyHash: "a7f3b2c1d4e5f6a8b9c0",
+//   publicKey: "MCowBQYDK2VwAyEA7x8Z9Kq3mN2pL5tR8vW4yB6cE1fH3gJ9kM7nP0qS2uV",
 //   name: "my-extension",
-//   fullId: "a7f3b2c1d4e5f6a8b9c0_my-extension_1.0.0",
 //   version: "1.0.0",
 //   namespace: "johndoe"  // Display only
 // }
@@ -478,15 +486,15 @@ const info = client.extensionInfo;
 ```typescript
 // Get table name for your extension
 const myTable = client.getTableName("users");
-// → "a7f3b2c1d4e5f6a8b9c0_my_extension_users"
+// → "MCowBQYDK2VwAyEA7x8Z9Kq3mN2pL5tR8vW4yB6cE1fH3gJ9kM7nP0qS2uV__my-extension__users"
 
 // Get table name for a dependency
 const depTable = client.getDependencyTableName(
-  "b1c2d3e4f5a6b7c8d9e0",  // Dependency's keyHash
+  "MCowBQYDK2VwAyEAp1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e6f7g8h9i0j1k",  // Dependency's publicKey
   "password-manager",      // Dependency's name
   "credentials"            // Table name
 );
-// → "b1c2d3e4f5a6b7c8d9e0_password_manager_credentials"
+// → "MCowBQYDK2VwAyEAp1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e6f7g8h9i0j1k__password-manager__credentials"
 ```
 
 ### Database Operations
@@ -599,10 +607,9 @@ const deps = await client.getDependencies();
 
 // Each dependency has:
 // {
-//   keyHash: string,
+//   publicKey: string,
 //   name: string,
-//   version: string,
-//   fullId: string
+//   version: string
 // }
 ```
 
@@ -611,7 +618,7 @@ const deps = await client.getDependencies();
 ```typescript
 // Request permission (runtime - usually done via manifest)
 const response = await client.requestDatabasePermission({
-  resource: 'a7f3b2c1d4e5f6a8b9c0_password_manager_credentials',
+  resource: 'MCowBQYDK2VwAyEAp1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e6f7g8h9i0j1k__password-manager__credentials',
   operation: 'read',
   reason: 'To retrieve email credentials'
 });
@@ -622,7 +629,7 @@ if (response.status === 'granted') {
 
 // Check if permission exists
 const hasPermission = await client.checkDatabasePermission(
-  'a7f3b2c1d4e5f6a8b9c0_password_manager_credentials',
+  'MCowBQYDK2VwAyEAp1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e6f7g8h9i0j1k__password-manager__credentials',
   'read'
 );
 ```
@@ -687,7 +694,7 @@ Your extension needs a `manifest.json` file:
 
   "dependencies": [
     {
-      "keyHash": "a7f3b2c1d4e5f6a8b9c0",
+      "publicKey": "MCowBQYDK2VwAyEAp1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e6f7g8h9i0j1k",
       "name": "password-manager",
       "minVersion": "1.0.0",
       "reason": "To access stored credentials",
@@ -740,7 +747,7 @@ await db.insert(credentialsTable, {
 
   "dependencies": [
     {
-      "keyHash": "a7f3b2c1d4e5f6a8b9c0",
+      "publicKey": "MCowBQYDK2VwAyEAp1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e6f7g8h9i0j1k",
       "name": "password-manager",
       "minVersion": "1.0.0",
       "reason": "Access stored credentials for email sync",
@@ -768,7 +775,7 @@ function EmailClient() {
     // Access Password Manager's credentials table
     // ✅ Works because we declared permission in manifest
     const credentialsTable = client.getDependencyTableName(
-      'a7f3b2c1d4e5f6a8b9c0',   // Password Manager's keyHash
+      'MCowBQYDK2VwAyEAp1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e6f7g8h9i0j1k',   // Password Manager's publicKey
       'password-manager',        // Extension name
       'credentials'              // Table name
     );
@@ -885,7 +892,7 @@ This ensures the extension hasn't been modified since you signed it.
 ### ✅ Automatic Isolation
 
 - **Own tables**: Full CRUD access without permissions
-- **Table namespacing**: Automatic prefix with keyHash prevents conflicts
+- **Table namespacing**: Automatic prefix with publicKey prevents conflicts
 - **Sandbox isolation**: Extensions cannot access each other's data by default
 - **No manifest bloat**: No need to declare own tables
 
@@ -907,7 +914,7 @@ This ensures the extension hasn't been modified since you signed it.
 ### ✅ Dependency Validation
 
 - Must declare dependencies in manifest
-- Extension name must match keyHash
+- Extension name must match publicKey
 - Version requirements enforced (semver)
 - Missing dependencies prevent installation
 

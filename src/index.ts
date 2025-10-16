@@ -30,8 +30,8 @@ export type {
 export {
   PermissionStatus,
   ErrorCode,
-  KEY_HASH_LENGTH,
   DEFAULT_TIMEOUT,
+  TABLE_SEPARATOR,
 } from "./types";
 export { HaexHubError } from "./types";
 

@@ -6,38 +6,37 @@
  */
 
 export function installCookiePolyfill(): void {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
+  if (typeof window === "undefined" || typeof document === "undefined") {
     return; // Skip in Node.js environment
   }
 
   // Test if cookies are available
   let cookiesWork = false;
   try {
-    document.cookie = '__cookie_test__=1';
-    cookiesWork = document.cookie.indexOf('__cookie_test__') !== -1;
-    document.cookie = '__cookie_test__=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = "__cookie_test__=1";
+    cookiesWork = document.cookie.indexOf("__cookie_test__") !== -1;
   } catch (e) {
-    console.warn('[HaexHub] Cookies blocked – using in-memory fallback');
+    console.warn("[HaexHub] Cookies blocked – using in-memory fallback");
   }
 
   if (!cookiesWork) {
     const cookieStore = new Map<string, string>();
 
-    Object.defineProperty(document, 'cookie', {
+    Object.defineProperty(document, "cookie", {
       get(): string {
         const cookies: string[] = [];
         cookieStore.forEach((value, key) => {
           cookies.push(`${key}=${value}`);
         });
-        return cookies.join('; ');
+        return cookies.join("; ");
       },
       set(cookieString: string): void {
-        const parts = cookieString.split(';').map(p => p.trim());
+        const parts = cookieString.split(";").map((p) => p.trim());
         const [keyValue] = parts;
 
         if (!keyValue) return;
 
-        const [key, value] = keyValue.split('=');
+        const [key, value] = keyValue.split("=");
         if (!key) return;
 
         // Parse options
@@ -45,7 +44,7 @@ export function installCookiePolyfill(): void {
         for (let i = 1; i < parts.length; i++) {
           const part = parts[i];
           if (!part) continue;
-          const parts_split = part.split('=');
+          const parts_split = part.split("=");
           const optKey = parts_split[0];
           const optValue = parts_split[1];
           if (optKey) {
@@ -55,7 +54,7 @@ export function installCookiePolyfill(): void {
 
         // Check for deletion (expires in past)
         const expiresValue = options.expires;
-        if (expiresValue && typeof expiresValue === 'string') {
+        if (expiresValue && typeof expiresValue === "string") {
           const expiresDate = new Date(expiresValue);
           if (expiresDate < new Date()) {
             cookieStore.delete(key);
@@ -64,18 +63,18 @@ export function installCookiePolyfill(): void {
         }
 
         // Check for max-age=0 deletion
-        const maxAgeValue = options['max-age'];
-        if (typeof maxAgeValue === 'string' && maxAgeValue === '0') {
+        const maxAgeValue = options["max-age"];
+        if (typeof maxAgeValue === "string" && maxAgeValue === "0") {
           cookieStore.delete(key);
           return;
         }
 
         // Store cookie
-        cookieStore.set(key, value || '');
+        cookieStore.set(key, value || "");
       },
-      configurable: true
+      configurable: true,
     });
 
-    console.log('[HaexHub] Cookie polyfill installed');
+    console.log("[HaexHub] Cookie polyfill installed");
   }
 }
