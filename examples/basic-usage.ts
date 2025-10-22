@@ -21,7 +21,7 @@ async function setupTheme() {
   if (context) {
     console.log("Current theme:", context.theme); // 'light' | 'dark' | 'system'
     console.log("Current locale:", context.locale); // 'en', 'de', etc.
-    console.log("Platform:", context.platform); // 'desktop' | 'mobile' | 'tablet'
+    console.log("Platform:", context.platform); // "linux", "macos", "ios", "freebsd", "dragonfly", "netbsd", "openbsd", "solaris", "android", "windows", undefined
 
     // Apply theme to extension UI
     if (context.theme === "dark") {

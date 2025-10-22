@@ -10,6 +10,7 @@ import type {
   ApplicationContext,
   SearchResult,
   ContextChangedEvent,
+  DatabaseQueryResult,
 } from "./types";
 import {
   ErrorCode,
@@ -17,9 +18,9 @@ import {
   TABLE_SEPARATOR,
   HaexHubError,
 } from "./types";
-import { DatabaseAPI } from "./api/database";
 import { StorageAPI } from "./api/storage";
 import { installConsoleForwarding } from "./polyfills/consoleForwarding";
+import { drizzle, type SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 
 export class HaexHubClient {
   private config: Required<HaexHubConfig>;
@@ -39,7 +40,10 @@ export class HaexHubClient {
   private _context: ApplicationContext | null = null;
   private reactiveSubscribers: Set<() => void> = new Set();
 
-  public readonly db: DatabaseAPI;
+  private readyPromise: Promise<void>;
+  private resolveReady!: () => void; // Wird im Konstruktor initialisiert
+
+  public db: SqliteRemoteDatabase<Record<string, unknown>> | null = null;
   public readonly storage: StorageAPI;
 
   constructor(config: HaexHubConfig = {}) {
@@ -48,13 +52,94 @@ export class HaexHubClient {
       timeout: config.timeout ?? DEFAULT_TIMEOUT,
     };
 
-    this.db = new DatabaseAPI(this);
     this.storage = new StorageAPI(this);
 
     // Install console forwarding if in debug mode
     installConsoleForwarding(this.config.debug);
 
+    this.readyPromise = new Promise((resolve) => {
+      this.resolveReady = resolve;
+    });
+
     this.init();
+  }
+
+  /**
+   * Gibt ein Promise zurück, das aufgelöst wird, sobald der Client
+   * initialisiert ist und Extension-Infos empfangen hat.
+   */
+  public async ready(): Promise<void> {
+    return this.readyPromise;
+  }
+
+  /**
+   * Initialisiert die Drizzle-Datenbankinstanz.
+   * Muss nach der Definition des Schemas aufgerufen werden.
+   * @param schema Das Drizzle-Schemaobjekt (mit bereits geprefixten Tabellennamen).
+   * @returns Die typsichere Drizzle-Datenbankinstanz.
+   */
+  public initializeDatabase<T extends Record<string, unknown>>(
+    schema: T
+  ): SqliteRemoteDatabase<T> {
+    if (!this._extensionInfo) {
+      throw new HaexHubError(
+        ErrorCode.EXTENSION_INFO_UNAVAILABLE,
+        "errors.client_not_ready"
+      );
+    }
+
+    const dbInstance = drizzle<T>(
+      async (
+        sql: string,
+        params: unknown[],
+        method: "get" | "run" | "all" | "values"
+      ) => {
+        try {
+          if (method === "run") {
+            // 'run' (INSERT, UPDATE, DELETE) auf 'db.execute' mappen
+            const result = await this.request<DatabaseQueryResult>(
+              "db.execute",
+              {
+                query: sql,
+                params: params as unknown[],
+              }
+            );
+            // Drizzle erwartet { rowsAffected, lastInsertId }
+            return result;
+          }
+
+          // 'get', 'all', 'values' mappen wir auf 'db.query'
+          const result = await this.request<DatabaseQueryResult>("db.query", {
+            query: sql,
+            params: params as unknown[],
+          });
+
+          // Drizzle erwartet die rohen Daten-Arrays
+          const rows = result.rows as any[];
+
+          if (method === "get") {
+            // 'get' will die erste Zeile oder null
+            return rows[0] ?? null;
+          }
+
+          if (method === "values") {
+            // 'values' will ein Array von Arrays (Zeilen -> Werte)
+            return rows.map((row) => Object.values(row));
+          }
+
+          // 'all' will ein Array von Objekten (Zeilen)
+          return rows;
+        } catch (error) {
+          // Wir nutzen this.log, wie du es implementiert hast
+          this.log("Drizzle proxy error:", error);
+          throw error; // Fehler an Drizzle weitergeben
+        }
+      },
+      schema
+    );
+
+    this.db = dbInstance;
+    return dbInstance;
   }
 
   public get extensionInfo(): ExtensionInfo | null {
@@ -264,6 +349,9 @@ export class HaexHubClient {
         data: { context: this._context },
         timestamp: Date.now(),
       });
+
+      // +++ NEU: Signalisiert, dass der Client bereit ist +++
+      this.resolveReady();
     } catch (error) {
       this.log("Failed to get extension info or context:", error);
     }
@@ -362,7 +450,11 @@ export class HaexHubClient {
   }
 
   private validatePublicKey(publicKey: string): void {
-    if (!publicKey || typeof publicKey !== "string" || publicKey.trim() === "") {
+    if (
+      !publicKey ||
+      typeof publicKey !== "string" ||
+      publicKey.trim() === ""
+    ) {
       throw new HaexHubError(
         ErrorCode.INVALID_PUBLIC_KEY,
         "errors.invalid_public_key",

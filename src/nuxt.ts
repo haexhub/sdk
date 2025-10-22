@@ -2,9 +2,9 @@
  * Nuxt Module for HaexHub SDK
  * Automatically injects polyfills into the built HTML files
  */
-import { defineNuxtModule, useNuxt } from "@nuxt/kit";
+import { createResolver, defineNuxtModule, useNuxt } from "@nuxt/kit";
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { getPolyfillCode } from "./polyfills/standalone";
 import { getCorsHeaders } from "./cors";
 
@@ -20,12 +20,19 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt: "^3.0.0 || ^4.0.0",
     },
   },
+
   defaults: {
     injectPolyfills: true,
   },
+
   async setup(options: ModuleOptions) {
     const nuxt = useNuxt();
+    const { resolve } = createResolver(import.meta.url);
 
+    nuxt.addPlugin({
+      src: resolve("./runtime/nuxt.plugin.client.ts"),
+      mode: "client",
+    });
     // CRITICAL: Install polyfill hook BEFORE any other module
     // This ensures polyfills load before color-mode or any other script
     if (options.injectPolyfills && nuxt.options.dev) {
