@@ -29,7 +29,7 @@ export default defineNuxtModule<ModuleOptions>({
     const { resolve } = createResolver(import.meta.url);
 
     addPlugin({
-      src: resolve("./nuxt.plugin.client.mjs"), // <-- Nur ein String
+      src: resolve("./runtime/nuxt.plugin.client.mjs"),
       mode: "client",
     });
     // CRITICAL: Install polyfill hook BEFORE any other module
