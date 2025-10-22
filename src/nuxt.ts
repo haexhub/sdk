@@ -2,7 +2,12 @@
  * Nuxt Module for HaexHub SDK
  * Automatically injects polyfills into the built HTML files
  */
-import { createResolver, defineNuxtModule, useNuxt } from "@nuxt/kit";
+import {
+  addPlugin,
+  createResolver,
+  defineNuxtModule,
+  useNuxt,
+} from "@nuxt/kit";
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { getPolyfillCode } from "./polyfills/standalone";
@@ -29,7 +34,7 @@ export default defineNuxtModule<ModuleOptions>({
     const nuxt = useNuxt();
     const { resolve } = createResolver(import.meta.url);
 
-    nuxt.addPlugin({
+    addPlugin({
       src: resolve("./runtime/nuxt.plugin.client.ts"),
       mode: "client",
     });
