@@ -2,12 +2,11 @@
  * Nuxt Module for HaexHub SDK
  * Automatically injects polyfills into the built HTML files
  */
-import { addPlugin, defineNuxtModule } from "@nuxt/kit";
+import { addPlugin, createResolver, defineNuxtModule } from "@nuxt/kit";
 import { getCorsHeaders } from "./cors";
 import { getPolyfillCode } from "./polyfills/standalone";
-import { join, resolve } from "node:path";
+import { join, resolve as resolvePath } from "node:path";
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
-import NuxtPlugin from "./runtime/nuxt.plugin.client";
 import type { Nuxt } from "@nuxt/schema";
 export interface ModuleOptions {
   injectPolyfills?: boolean;
@@ -27,7 +26,12 @@ export default defineNuxtModule<ModuleOptions>({
   },
 
   async setup(options: ModuleOptions, nuxt: Nuxt) {
-    addPlugin(NuxtPlugin);
+    const { resolve } = createResolver(import.meta.url);
+
+    addPlugin({
+      src: resolve("./runtime/nuxt.plugin.client"), // <-- Nur ein String
+      mode: "client",
+    });
     // CRITICAL: Install polyfill hook BEFORE any other module
     // This ensures polyfills load before color-mode or any other script
     if (options.injectPolyfills && nuxt.options.dev) {
@@ -109,7 +113,7 @@ export default defineNuxtModule<ModuleOptions>({
         const nitroOutput = nuxt.options.nitro?.output || {};
         const outputDir = nitroOutput.dir || ".output";
         const publicDir = nitroOutput.publicDir || "public";
-        const distDir = resolve(nuxt.options.rootDir, outputDir, publicDir);
+        const distDir = resolvePath(nuxt.options.rootDir, outputDir, publicDir);
 
         // Get polyfill code from modular polyfills
         const polyfillCode = getPolyfillCode();
