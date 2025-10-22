@@ -1,4 +1,4 @@
-import { defineNuxtPlugin } from "#app";
+import { defineNuxtPlugin } from "nuxt/app";
 import { shallowRef } from "vue";
 import { HaexHubClient } from "~/client";
 
