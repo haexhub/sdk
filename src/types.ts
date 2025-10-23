@@ -21,14 +21,13 @@ export interface HaexHubError {
   details?: Record<string, unknown>;
 }
 
-// Extension Info (provided by HaexHub at runtime)
+// Extension Info (loaded from manifest.json at build time)
 export interface ExtensionInfo {
   publicKey: string;
   name: string;
   version: string;
   displayName?: string;
   namespace?: string;
-  allowedOrigin: string;
 }
 
 // Application Context (provided by HaexHub)
@@ -149,6 +148,12 @@ export type EventCallback = (event: HaexHubEvent) => void;
 export interface HaexHubConfig {
   debug?: boolean;
   timeout?: number;
+  /** Extension manifest data (auto-injected by framework integrations) */
+  manifest?: {
+    name: string;
+    version: string;
+    public_key: string;
+  };
 }
 
 // Error Codes

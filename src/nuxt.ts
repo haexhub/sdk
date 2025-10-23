@@ -28,6 +28,38 @@ export default defineNuxtModule<ModuleOptions>({
   async setup(options: ModuleOptions, nuxt: Nuxt) {
     const { resolve } = createResolver(import.meta.url);
 
+    // Read manifest.json from haextension/ folder and make it available as virtual module
+    const manifestPath = resolvePath(nuxt.options.rootDir, "haextension/manifest.json");
+    let manifestContent = "{}";
+    try {
+      manifestContent = readFileSync(manifestPath, "utf-8");
+      console.log("✓ [@haexhub/sdk] Loaded haextension/manifest.json");
+    } catch (error) {
+      console.warn(
+        "[@haexhub/sdk] Warning: haextension/manifest.json not found, extension info will not be available"
+      );
+    }
+
+    // Add virtual module for manifest
+    nuxt.hook("vite:extendConfig", (config) => {
+      config.plugins = config.plugins || [];
+      config.plugins.push({
+        name: "haexhub-manifest-virtual",
+        resolveId(id) {
+          if (id === "#haexhub/manifest") {
+            return "\0" + id; // Use null byte prefix for virtual modules
+          }
+          return null;
+        },
+        load(id) {
+          if (id === "\0#haexhub/manifest") {
+            return `export const manifest = ${manifestContent}`;
+          }
+          return null;
+        },
+      });
+    });
+
     addPlugin({
       src: resolve("./runtime/nuxt.plugin.client.mjs"),
       mode: "client",

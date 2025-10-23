@@ -23,7 +23,9 @@ import { installConsoleForwarding } from "./polyfills/consoleForwarding";
 import { drizzle, type SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 
 export class HaexHubClient {
-  private config: Required<HaexHubConfig>;
+  private config: Required<Omit<HaexHubConfig, "manifest">> & {
+    manifest?: HaexHubConfig["manifest"];
+  };
   private pendingRequests: Map<
     string,
     {
@@ -50,6 +52,7 @@ export class HaexHubClient {
     this.config = {
       debug: config.debug ?? false,
       timeout: config.timeout ?? DEFAULT_TIMEOUT,
+      manifest: config.manifest,
     };
 
     this.storage = new StorageAPI(this);
@@ -275,7 +278,8 @@ export class HaexHubClient {
 
       this.pendingRequests.set(requestId, { resolve, reject, timeout });
 
-      const targetOrigin = this._extensionInfo?.allowedOrigin || "*";
+      // Use wildcard origin since extensions are sandboxed in their own protocol
+      const targetOrigin = "*";
       console.log("[SDK Debug] ========== Sending Request ==========");
       console.log("[SDK Debug] Request ID:", requestId);
       console.log("[SDK Debug] Method:", request.method);
@@ -329,17 +333,24 @@ export class HaexHubClient {
     this.log("HaexHub SDK initialized");
 
     try {
-      this._extensionInfo = await this.request<ExtensionInfo>(
-        "extension.getInfo"
-      );
-      this.log("Extension info received:", this._extensionInfo);
-      this.notifySubscribers();
+      // Load extension info from manifest (if provided in config)
+      if (this.config.manifest) {
+        this._extensionInfo = {
+          publicKey: this.config.manifest.public_key,
+          name: this.config.manifest.name,
+          version: this.config.manifest.version,
+          displayName: this.config.manifest.name,
+        };
+        this.log("Extension info loaded from manifest:", this._extensionInfo);
+        this.notifySubscribers();
 
-      this.emitEvent({
-        type: "extension.info.loaded",
-        data: { info: this._extensionInfo },
-        timestamp: Date.now(),
-      });
+        this.emitEvent({
+          type: "extension.info.loaded",
+          data: { info: this._extensionInfo },
+          timestamp: Date.now(),
+        });
+      }
+
       this._context = await this.request<ApplicationContext>("context.get");
       this.log("Application context received:", this._context);
       this.notifySubscribers();
@@ -353,7 +364,7 @@ export class HaexHubClient {
       // +++ NEU: Signalisiert, dass der Client bereit ist +++
       this.resolveReady();
     } catch (error) {
-      this.log("Failed to get extension info or context:", error);
+      this.log("Failed to load extension info or context:", error);
     }
   }
 
@@ -367,25 +378,13 @@ export class HaexHubClient {
     console.log("[SDK Debug] Event data:", event.data);
     console.log("[SDK Debug] Extension info loaded:", !!this._extensionInfo);
     console.log(
-      "[SDK Debug] Allowed origin:",
-      this._extensionInfo?.allowedOrigin
-    );
-    console.log(
-      "[SDK Debug] Origins match:",
-      event.origin === this._extensionInfo?.allowedOrigin
-    );
-    console.log(
       "[SDK Debug] Pending requests count:",
       this.pendingRequests.size
     );
 
-    if (
-      this._extensionInfo &&
-      event.origin !== this._extensionInfo.allowedOrigin
-    ) {
-      console.error("[SDK Debug] ❌ REJECTED: Origin mismatch!");
-      console.error("[SDK Debug] Expected:", this._extensionInfo.allowedOrigin);
-      console.error("[SDK Debug] Got:", event.origin);
+    // Verify message comes from parent window (HaexHub)
+    if (event.source !== window.parent) {
+      console.error("[SDK Debug] ❌ REJECTED: Message not from parent window!");
       return;
     }
 
