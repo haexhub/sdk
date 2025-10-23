@@ -1,18 +1,18 @@
-import { defineNuxtPlugin } from "nuxt/app";
+import { defineNuxtPlugin, useRuntimeConfig } from "nuxt/app";
 import { shallowRef } from "vue";
 import { HaexHubClient } from "~/client";
-import { manifest } from "#haexhub/manifest";
+import type { ExtensionManifest } from "~/types";
 
 export default defineNuxtPlugin(async (nuxtApp) => {
+  // Get manifest from runtime config (injected by Nuxt module)
+  const config = useRuntimeConfig();
+  const manifest = config.public.haexhubManifest as ExtensionManifest | null;
+
   // 1. Erstelle die Client-Instanz
   const client = new HaexHubClient({
     // @ts-ignore
     debug: nuxtApp.payload.config.public.debug ?? false,
-    manifest: {
-      name: manifest.name,
-      version: manifest.version,
-      public_key: manifest.public_key,
-    },
+    manifest: manifest || undefined,
   });
 
   // 2. Erstelle einen reaktiven Container (shallowRef ist performant)

@@ -8,8 +8,21 @@ import { getPolyfillCode } from "./polyfills/standalone";
 import { join, resolve as resolvePath } from "node:path";
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import type { Nuxt } from "@nuxt/schema";
+import type { ExtensionManifest } from "./types";
+
 export interface ModuleOptions {
   injectPolyfills?: boolean;
+  /**
+   * Directory containing extension files (manifest.json, public.key, private.key)
+   * Default: "haextension"
+   */
+  extensionDir?: string;
+  /** Path to manifest.json (overrides extensionDir if specified) */
+  manifestPath?: string;
+  /** Path to public.key (overrides extensionDir if specified) */
+  publicKeyPath?: string;
+  /** Path to private.key (overrides extensionDir if specified) */
+  privateKeyPath?: string;
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -23,50 +36,37 @@ export default defineNuxtModule<ModuleOptions>({
 
   defaults: {
     injectPolyfills: true,
+    extensionDir: "haextension",
   },
 
   async setup(options: ModuleOptions, nuxt: Nuxt) {
     const { resolve } = createResolver(import.meta.url);
 
-    // Read manifest.json from haextension/ folder and make it available as virtual module
-    const manifestPath = resolvePath(nuxt.options.rootDir, "haextension/manifest.json");
-    let manifestContent = "{}";
+    // Determine manifest path (explicit path overrides extensionDir)
+    const manifestPath = options.manifestPath
+      ? resolvePath(nuxt.options.rootDir, options.manifestPath)
+      : resolvePath(nuxt.options.rootDir, options.extensionDir!, "manifest.json");
+
+    // Read manifest.json and inject into runtime config
+    let manifest: ExtensionManifest | null = null;
     try {
-      manifestContent = readFileSync(manifestPath, "utf-8");
-      console.log("✓ [@haexhub/sdk] Loaded haextension/manifest.json");
+      const manifestContent = readFileSync(manifestPath, "utf-8");
+      const parsed = JSON.parse(manifestContent);
+      manifest = {
+        name: parsed.name,
+        version: parsed.version,
+        public_key: parsed.public_key,
+      };
+      console.log(`✓ [@haexhub/sdk] Loaded ${manifestPath}`);
     } catch (error) {
       console.warn(
-        "[@haexhub/sdk] Warning: haextension/manifest.json not found, extension info will not be available"
+        `[@haexhub/sdk] Warning: manifest.json not found at ${manifestPath}, extension info will not be available`
       );
     }
 
-    // Add virtual module for manifest and inject as define
-    nuxt.hook("vite:extendConfig", (config, { isClient }) => {
-      if (!isClient) return; // Only for client build
-
-      // Add define for global manifest replacement
-      config.define = config.define || {};
-      config.define['__HAEXHUB_MANIFEST__'] = manifestContent;
-
-      // Add virtual module
-      config.plugins = config.plugins || [];
-      config.plugins.push({
-        name: "haexhub-manifest-virtual",
-        enforce: "pre",
-        resolveId(id) {
-          if (id === "#haexhub/manifest") {
-            return "\0" + id; // Use null byte prefix for virtual modules
-          }
-          return null;
-        },
-        load(id) {
-          if (id === "\0#haexhub/manifest") {
-            return `export const manifest = __HAEXHUB_MANIFEST__`;
-          }
-          return null;
-        },
-      });
-    });
+    // Inject manifest into public runtime config
+    nuxt.options.runtimeConfig.public = nuxt.options.runtimeConfig.public || {};
+    nuxt.options.runtimeConfig.public.haexhubManifest = manifest;
 
     addPlugin({
       src: resolve("./runtime/nuxt.plugin.client.mjs"),

@@ -144,16 +144,19 @@ export interface SearchRequestEvent extends HaexHubEvent {
 
 export type EventCallback = (event: HaexHubEvent) => void;
 
+// Manifest Types
+export interface ExtensionManifest {
+  name: string;
+  version: string;
+  public_key: string;
+}
+
 // Config Types
 export interface HaexHubConfig {
   debug?: boolean;
   timeout?: number;
   /** Extension manifest data (auto-injected by framework integrations) */
-  manifest?: {
-    name: string;
-    version: string;
-    public_key: string;
-  };
+  manifest?: ExtensionManifest;
 }
 
 // Error Codes
