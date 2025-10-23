@@ -40,11 +40,19 @@ export default defineNuxtModule<ModuleOptions>({
       );
     }
 
-    // Add virtual module for manifest
-    nuxt.hook("vite:extendConfig", (config) => {
+    // Add virtual module for manifest and inject as define
+    nuxt.hook("vite:extendConfig", (config, { isClient }) => {
+      if (!isClient) return; // Only for client build
+
+      // Add define for global manifest replacement
+      config.define = config.define || {};
+      config.define['__HAEXHUB_MANIFEST__'] = manifestContent;
+
+      // Add virtual module
       config.plugins = config.plugins || [];
       config.plugins.push({
         name: "haexhub-manifest-virtual",
+        enforce: "pre",
         resolveId(id) {
           if (id === "#haexhub/manifest") {
             return "\0" + id; // Use null byte prefix for virtual modules
@@ -53,7 +61,7 @@ export default defineNuxtModule<ModuleOptions>({
         },
         load(id) {
           if (id === "\0#haexhub/manifest") {
-            return `export const manifest = ${manifestContent}`;
+            return `export const manifest = __HAEXHUB_MANIFEST__`;
           }
           return null;
         },

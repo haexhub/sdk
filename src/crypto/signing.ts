@@ -101,7 +101,8 @@ export class ExtensionSigner {
     outputPath?: string
   ): Promise<string> {
     // === VORBEREITUNG ===
-    const manifestPath = path.join(extensionPath, "manifest.json");
+    // Read manifest from haextension/ folder (new convention)
+    const manifestPath = path.join(extensionPath, "haextension", "manifest.json");
     const originalManifestContent = await fs.readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(originalManifestContent);
 
