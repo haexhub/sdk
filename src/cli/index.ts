@@ -154,7 +154,7 @@ program
 program
   .command("keygen")
   .description("Generate a new keypair for signing extensions")
-  .option("-o, --output <path>", "Output directory", ".")
+  .option("-o, --output <path>", "Output directory", "./haextension")
   .action(async (options) => {
     const { publicKey, privateKey } = await ExtensionSigner.generateKeypair();
 
@@ -173,7 +173,7 @@ program
 program
   .command("sign <extension-path>")
   .description("Sign and package an extension")
-  .option("-k, --key <path>", "Private key file", "./private.key")
+  .option("-k, --key <path>", "Private key file", "./haextension/private.key")
   .option("-o, --output <path>", "Output path for .haextension file")
   .action(async (extensionPath, options) => {
     try {
