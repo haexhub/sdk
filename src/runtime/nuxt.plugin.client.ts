@@ -18,7 +18,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   const state = shallowRef({
     isReady: false,
     context: client.context,
-    extensionInfo: client.extensionInfo,
   });
 
   // 3. Warte auf die Initialisierung des Clients
@@ -28,7 +27,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   state.value = {
     isReady: true,
     context: client.context,
-    extensionInfo: client.extensionInfo,
   };
 
   // 5. Nutze dein Pub/Sub-Pattern, um auf künftige Updates zu lauschen
@@ -37,7 +35,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     state.value = {
       ...state.value, // Behalte isReady bei
       context: client.context,
-      extensionInfo: client.extensionInfo,
     };
   });
 
