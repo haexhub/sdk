@@ -1,12 +1,11 @@
-import { defineNuxtPlugin, useRuntimeConfig } from "nuxt/app";
+import { defineNuxtPlugin } from "nuxt/app";
 import { shallowRef } from "vue";
 import { HaexHubClient } from "~/client";
 import type { ExtensionManifest } from "~/types";
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   // Get manifest from runtime config (injected by Nuxt module)
-  const config = useRuntimeConfig();
-  const manifest = config.public.haexhubManifest as ExtensionManifest | null;
+  const manifest = nuxtApp.$config.public.haexhubManifest as ExtensionManifest | null;
 
   // 1. Erstelle die Client-Instanz
   const client = new HaexHubClient({
