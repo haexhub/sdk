@@ -45,6 +45,13 @@ export {
   installBaseTag,
 } from './polyfills';
 
+// Export config utilities
+export {
+  readHaextensionConfig,
+  getExtensionDir,
+  type HaextensionConfig,
+} from './config';
+
 import { HaexHubClient } from "./client";
 
 export function createHaexHubClient(

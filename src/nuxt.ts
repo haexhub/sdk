@@ -9,6 +9,7 @@ import { join, resolve as resolvePath } from "node:path";
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import type { Nuxt } from "@nuxt/schema";
 import type { ExtensionManifest } from "./types";
+import { readHaextensionConfig } from "./config";
 
 export interface ModuleOptions {
   injectPolyfills?: boolean;
@@ -42,10 +43,16 @@ export default defineNuxtModule<ModuleOptions>({
   async setup(options: ModuleOptions, nuxt: Nuxt) {
     const { resolve } = createResolver(import.meta.url);
 
+    // Read haextension.config.json if available
+    const config = readHaextensionConfig(nuxt.options.rootDir);
+
+    // Use config values as defaults if not explicitly set in options
+    const extensionDir = options.extensionDir || config?.dev?.haextension_dir || "haextension";
+
     // Determine manifest path (explicit path overrides extensionDir)
     const manifestPath = options.manifestPath
       ? resolvePath(nuxt.options.rootDir, options.manifestPath)
-      : resolvePath(nuxt.options.rootDir, options.extensionDir!, "manifest.json");
+      : resolvePath(nuxt.options.rootDir, extensionDir, "manifest.json");
 
     // Read manifest.json and inject into runtime config
     let manifest: ExtensionManifest | null = null;

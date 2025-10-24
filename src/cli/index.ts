@@ -105,11 +105,16 @@ program
         console.log("✓ Created .gitignore");
       }
 
-      // 5. Create haextension.json config
+      // 5. Create haextension.config.json
       const config = {
         dev: {
           port: 5173,
           host: "localhost",
+          haextension_dir: options.dir,
+        },
+        keys: {
+          public_key_path: `${options.dir}/public.key`,
+          private_key_path: `${options.dir}/private.key`,
         },
         build: {
           distDir: "dist",
@@ -117,10 +122,10 @@ program
       };
 
       await fs.writeFile(
-        path.join(cwd, "haextension.json"),
+        path.join(cwd, "haextension.config.json"),
         JSON.stringify(config, null, 2)
       );
-      console.log("✓ Created haextension.json");
+      console.log("✓ Created haextension.config.json");
 
       // 6. Update package.json scripts
       if (existsSync(packageJsonPath)) {
@@ -140,11 +145,12 @@ program
 
       console.log("\n✨ Extension initialized successfully!\n");
       console.log("📝 Next steps:");
-      console.log("  1. Edit haextension/manifest.json to configure your extension");
+      console.log(`  1. Edit ${options.dir}/manifest.json to configure your extension`);
       console.log("  2. Run 'npm run ext:dev' to start development mode");
       console.log("  3. Run 'npm run ext:build' to build and sign your extension");
-      console.log("\n⚠️  Important: Never commit haextension/private.key!");
-      console.log("   It has been added to .gitignore automatically.\n");
+      console.log("\n⚠️  Important: Never commit your private key:");
+      console.log(`   - ${options.dir}/private.key has been added to .gitignore`);
+      console.log("   - haextension.config.json is safe to commit (contains only paths)\n");
     } catch (error) {
       console.error("❌ Error:", error);
       process.exit(1);
