@@ -4,6 +4,7 @@ import * as fs from "fs/promises";
 import * as fsSync from "fs";
 import * as path from "path";
 import archiver from "archiver";
+import { getExtensionDir } from "~/config";
 
 export class ExtensionSigner {
   /**
@@ -101,8 +102,9 @@ export class ExtensionSigner {
     outputPath?: string
   ): Promise<string> {
     // === VORBEREITUNG ===
-    // Read manifest from haextension/ folder
-    const manifestPath = path.join("haextension", "manifest.json");
+    // Read manifest from haextension/ folder (using config)
+    const extensionDir = getExtensionDir();
+    const manifestPath = path.join(extensionDir, "manifest.json");
     const originalManifestContent = await fs.readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(originalManifestContent);
 
