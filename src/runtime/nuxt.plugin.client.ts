@@ -24,18 +24,22 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   await client.ready();
 
   // 4. Setze den initialen State, sobald der Client bereit ist
+  console.log('[Nuxt Plugin] Client ready, context:', client.context);
   state.value = {
     isReady: true,
     context: client.context,
   };
+  console.log('[Nuxt Plugin] Initial state set:', state.value);
 
   // 5. Nutze dein Pub/Sub-Pattern, um auf künftige Updates zu lauschen
   client.subscribe(() => {
+    console.log('[Nuxt Plugin] Client context updated:', client.context);
     // Triggere ein Update für das shallowRef
     state.value = {
       ...state.value, // Behalte isReady bei
       context: client.context,
     };
+    console.log('[Nuxt Plugin] State updated:', state.value);
   });
 
   // 6. Stelle den Client und den reaktiven State bereit

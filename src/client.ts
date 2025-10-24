@@ -351,6 +351,7 @@ export class HaexHubClient {
         });
       }
 
+      // Request context from HaexHub - this also acts as a handshake
       this._context = await this.request<ApplicationContext>("context.get");
       this.log("Application context received:", this._context);
       this.notifySubscribers();
