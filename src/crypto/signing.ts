@@ -130,14 +130,41 @@ export class ExtensionSigner {
     const canonicalManifestForHashing =
       this.sortObjectKeysRecursively(manifest);
 
-    await fs.writeFile(
-      manifestPath,
-      JSON.stringify(canonicalManifestForHashing, null, 2)
-    );
+    // 3. Temporäres Verzeichnis mit der exakten Struktur des Archivs erstellen
+    const { tmpdir } = await import("os");
+    const tempDir = path.join(tmpdir(), `haex-signing-${Date.now()}`);
+    await fs.mkdir(tempDir, { recursive: true });
 
-    // 3. Hash vom "kanonischen Inhalt" berechnen
-    //    Das Verzeichnis enthält jetzt die manifest.json mit leerer Signatur.
-    const contentHash = await this.hashDirectory(extensionPath);
+    let contentHash: Buffer;
+    try {
+      // Kopiere extensionPath Dateien ins temp root
+      const { execSync } = await import("child_process");
+      execSync(`cp -r "${extensionPath}/"* "${tempDir}/"`, { stdio: "ignore" });
+
+      // Kopiere haextension Verzeichnis
+      const tempExtensionDir = path.join(tempDir, extensionDir);
+      await fs.mkdir(tempExtensionDir, { recursive: true });
+      execSync(`cp -r "${extensionDir}/"* "${tempExtensionDir}/"`, { stdio: "ignore" });
+
+      // Schreibe manifest.json mit leerer Signatur ins temp haextension Verzeichnis
+      const tempManifestPath = path.join(tempExtensionDir, "manifest.json");
+      await fs.writeFile(
+        tempManifestPath,
+        JSON.stringify(canonicalManifestForHashing, null, 2)
+      );
+
+      // Kopiere haextension.config.json wenn vorhanden
+      const configPath = path.join(process.cwd(), "haextension.config.json");
+      if (fsSync.existsSync(configPath)) {
+        await fs.copyFile(configPath, path.join(tempDir, "haextension.config.json"));
+      }
+
+      // Hash über das komplette temp Verzeichnis berechnen
+      contentHash = await this.hashDirectory(tempDir);
+    } finally {
+      // Cleanup temp directory
+      await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
 
     // 4. Echte Signatur aus diesem Hash erstellen
     const signatureBuffer = await webcrypto.subtle.sign(
