@@ -45,6 +45,11 @@ export class ExtensionSigner {
     const files = await this.getAllFiles(dirPath);
     const sortedFiles = files.sort();
 
+    console.log(`=== Files to hash (${sortedFiles.length}): ===`);
+    for (const file of sortedFiles) {
+      console.log(`  - ${path.relative(dirPath, file)}`);
+    }
+
     const contents: Buffer[] = [];
     for (const file of sortedFiles) {
       const content = await fs.readFile(file);
