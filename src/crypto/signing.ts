@@ -141,10 +141,15 @@ export class ExtensionSigner {
       const { execSync } = await import("child_process");
       execSync(`cp -r "${extensionPath}/"* "${tempDir}/"`, { stdio: "ignore" });
 
-      // Kopiere haextension Verzeichnis
+      // Kopiere haextension Verzeichnis (ohne private.key)
       const tempExtensionDir = path.join(tempDir, extensionDir);
       await fs.mkdir(tempExtensionDir, { recursive: true });
-      execSync(`cp -r "${extensionDir}/"* "${tempExtensionDir}/"`, { stdio: "ignore" });
+
+      // Kopiere nur public.key, nicht private.key
+      const publicKeyPath = path.join(extensionDir, "public.key");
+      if (fsSync.existsSync(publicKeyPath)) {
+        await fs.copyFile(publicKeyPath, path.join(tempExtensionDir, "public.key"));
+      }
 
       // Schreibe manifest.json mit leerer Signatur ins temp haextension Verzeichnis
       const tempManifestPath = path.join(tempExtensionDir, "manifest.json");
@@ -210,8 +215,12 @@ export class ExtensionSigner {
       // Add extension files
       archive.directory(extensionPath, false);
 
-      // Add haextension directory with manifest
-      archive.directory(extensionDir, extensionDir);
+      // Add haextension directory with manifest (excluding private.key)
+      archive.glob("**/*", {
+        cwd: extensionDir,
+        ignore: ["private.key"],
+        dot: false
+      }, { prefix: extensionDir });
 
       // Add haextension.config.json if it exists
       const configPath = path.join(process.cwd(), "haextension.config.json");
