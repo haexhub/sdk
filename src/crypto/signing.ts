@@ -153,7 +153,7 @@ export class ExtensionSigner {
 
     // === VERPACKUNG & AUFRÄUMEN ===
 
-    // 6. Das Verzeichnis (das jetzt die finale manifest.json enthält) zippen
+    // 6. Das Verzeichnis zippen und haextension.config.json + haextension/ Ordner hinzufügen
     const finalOutputPath =
       outputPath || `${manifest.name}-${manifest.version}.haextension`;
     const output = fsSync.createWriteStream(finalOutputPath);
@@ -179,7 +179,19 @@ export class ExtensionSigner {
       archive.on("error", reject);
 
       archive.pipe(output);
+
+      // Add extension files
       archive.directory(extensionPath, false);
+
+      // Add haextension directory with manifest
+      archive.directory(extensionDir, extensionDir);
+
+      // Add haextension.config.json if it exists
+      const configPath = path.join(process.cwd(), "haextension.config.json");
+      if (fsSync.existsSync(configPath)) {
+        archive.file(configPath, { name: "haextension.config.json" });
+      }
+
       archive.finalize();
     });
   }
