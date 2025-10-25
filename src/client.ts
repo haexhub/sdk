@@ -99,9 +99,9 @@ export class HaexHubClient {
       ) => {
         try {
           if (method === "run") {
-            // 'run' (INSERT, UPDATE, DELETE) auf 'db.execute' mappen
+            // 'run' (INSERT, UPDATE, DELETE) auf 'haextension.db.execute' mappen
             const result = await this.request<DatabaseQueryResult>(
-              "db.execute",
+              "haextension.db.execute",
               {
                 query: sql,
                 params: params as unknown[],
@@ -111,8 +111,8 @@ export class HaexHubClient {
             return result;
           }
 
-          // 'get', 'all', 'values' mappen wir auf 'db.query'
-          const result = await this.request<DatabaseQueryResult>("db.query", {
+          // 'get', 'all', 'values' mappen wir auf 'haextension.db.query'
+          const result = await this.request<DatabaseQueryResult>("haextension.db.query", {
             query: sql,
             params: params as unknown[],
           });
@@ -352,7 +352,7 @@ export class HaexHubClient {
       }
 
       // Request context from HaexHub - this also acts as a handshake
-      this._context = await this.request<ApplicationContext>("context.get");
+      this._context = await this.request<ApplicationContext>("haextension.context.get");
       this.log("Application context received:", this._context);
       this.notifySubscribers();
 
@@ -427,7 +427,7 @@ export class HaexHubClient {
   }
 
   private handleEvent(event: HaexHubEvent): void {
-    if (event.type === "context.changed") {
+    if (event.type === "haextension.context.changed") {
       const contextEvent = event as ContextChangedEvent;
       this._context = contextEvent.data.context;
       this.log("Context updated:", this._context);

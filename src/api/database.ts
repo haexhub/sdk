@@ -5,10 +5,13 @@ export class DatabaseAPI {
   constructor(private client: HaexHubClient) {}
 
   async query<T>(query: string, params?: unknown[]): Promise<T[]> {
-    const result = await this.client.request<DatabaseQueryResult>("db.query", {
-      query,
-      params,
-    });
+    const result = await this.client.request<DatabaseQueryResult>(
+      "haextension.db.query",
+      {
+        query,
+        params,
+      }
+    );
 
     return result.rows as T[];
   }
@@ -25,14 +28,14 @@ export class DatabaseAPI {
     query: string,
     params?: unknown[]
   ): Promise<DatabaseQueryResult> {
-    return this.client.request<DatabaseQueryResult>("db.execute", {
+    return this.client.request<DatabaseQueryResult>("haextension.db.execute", {
       query,
       params,
     });
   }
 
   async transaction(statements: string[]): Promise<void> {
-    await this.client.request("db.transaction", {
+    await this.client.request("haextension.db.transaction", {
       statements,
     });
   }
