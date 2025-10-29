@@ -20,7 +20,7 @@
 import { useState, useEffect } from 'react';
 import { createHaexHubClient } from './index';
 import { HaexHubClient } from './client';
-import type { ExtensionInfo, ApplicationContext } from './types';
+import type { ExtensionInfo, ApplicationContext, HaexHubConfig } from './types';
 
 // Shared SDK client instance - initialized once at module level
 let clientInstance: HaexHubClient | null = null;
@@ -34,7 +34,7 @@ let clientInstance: HaexHubClient | null = null;
  * @param config - Optional SDK configuration
  * @returns SDK instance with extensionInfo, context, db, and storage
  */
-export function useHaexHub(config: { debug?: boolean; timeout?: number } = {}) {
+export function useHaexHub(config: HaexHubConfig = {}) {
   // Initialize SDK only once
   if (!clientInstance) {
     clientInstance = createHaexHubClient(config);

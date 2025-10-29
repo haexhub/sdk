@@ -22,7 +22,7 @@ import { writable, readonly as svelteReadonly } from 'svelte/store';
 import type { Readable } from 'svelte/store';
 import { createHaexHubClient } from './index';
 import { HaexHubClient } from './client';
-import type { ExtensionInfo, ApplicationContext } from './types';
+import type { ExtensionInfo, ApplicationContext, HaexHubConfig } from './types';
 
 // Shared SDK client instance - initialized once at module level
 let clientInstance: HaexHubClient | null = null;
@@ -38,7 +38,7 @@ const contextStore = writable<ApplicationContext | null>(null);
  *
  * @param config - Optional SDK configuration
  */
-export function initHaexHub(config: { debug?: boolean; timeout?: number } = {}) {
+export function initHaexHub(config: HaexHubConfig = {}) {
   if (!clientInstance) {
     clientInstance = createHaexHubClient(config);
 
