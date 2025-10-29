@@ -12,6 +12,63 @@ pnpm add @haexhub/sdk
 yarn add @haexhub/sdk
 ```
 
+## Quick Start
+
+### 1. Initialize Your Project
+
+```bash
+# Create your project (any framework)
+npm create vite@latest my-extension -- --template react-ts
+
+# Install SDK
+cd my-extension
+npm install @haexhub/sdk
+
+# Initialize extension structure
+npx haexhub init
+```
+
+The `haexhub init` command creates:
+- `haextension/` directory with `manifest.json`
+- Public/private keypair (`public.key`, `private.key`)
+- `haextension.config.json` for development
+- Updates `.gitignore` to exclude `private.key`
+- Adds npm scripts (`ext:dev`, `ext:build`)
+
+### 2. Load the Manifest
+
+Import the manifest in your app's entry point:
+
+```typescript
+import manifest from './haextension/manifest.json'; // or '../haextension/manifest.json'
+const { client } = useHaexHub({ manifest });
+```
+
+### 3. Run Your Extension
+
+```bash
+# Development
+npm run ext:dev
+
+# Build & sign for production
+npm run ext:build
+```
+
+## Demo Projects
+
+Complete working examples for each framework:
+
+- **Nuxt**: [github.com/haexhub/haex-demo-nuxt](https://github.com/haexhub/haex-demo-nuxt)
+- **React**: [github.com/haexhub/haex-demo-react](https://github.com/haexhub/haex-demo-react)
+- **Svelte**: [github.com/haexhub/haex-demo-svelte](https://github.com/haexhub/haex-demo-svelte)
+- **Vite**: [github.com/haexhub/haex-demo-vite](https://github.com/haexhub/haex-demo-vite)
+
+Each demo shows:
+- ✅ Database operations (CREATE, INSERT, SELECT)
+- ✅ Application context subscription (theme & locale)
+- ✅ Manifest loading
+- ✅ Framework-specific best practices
+
 ## Framework Integration
 
 The HaexHub SDK provides **framework-specific adapters** for seamless integration with popular frameworks:
@@ -28,36 +85,46 @@ npm install @haexhub/sdk
 ```vue
 <script setup lang="ts">
 import { useHaexHub } from '@haexhub/sdk/vue';
+import manifest from './manifest.json';
 
-const { extensionInfo, context, db, storage, getTableName } = useHaexHub({ debug: true });
+const { client, context, getTableName } = useHaexHub({ manifest });
 
-// Automatically reactive!
-watch(() => extensionInfo.value, (info) => {
-  console.log('Extension loaded:', info);
-});
+// Watch for context changes (theme/locale from HaexHub)
+watch(() => context.value, (ctx) => {
+  if (ctx) {
+    console.log('Theme:', ctx.theme);  // 'light' or 'dark'
+    console.log('Locale:', ctx.locale); // 'en', 'de', etc.
+
+    // Update your app's theme
+    document.documentElement.classList.toggle('dark', ctx.theme === 'dark');
+  }
+}, { immediate: true });
 
 // Create your own table - no permissions needed!
 // Tables are automatically namespaced with your extension's publicKey
 const tableName = getTableName('users');
-await db.createTable(tableName, `
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL
+await client.execute(`
+  CREATE TABLE IF NOT EXISTS ${tableName} (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL
+  )
 `);
 
 // Full read/write access to your own tables
-await db.insert(tableName, {
-  name: 'John Doe',
-  email: 'john@example.com'
-});
+await client.execute(
+  `INSERT INTO ${tableName} (id, name, email) VALUES (?, ?, ?)`,
+  [crypto.randomUUID(), 'John Doe', 'john@example.com']
+);
 
-const users = await db.query<User>(`SELECT * FROM ${tableName}`);
+const users = await client.query<User>(`SELECT * FROM ${tableName}`);
 </script>
 
 <template>
   <div>
-    <h1>{{ extensionInfo?.name }}</h1>
+    <h1>My Extension</h1>
     <p>Theme: {{ context?.theme }}</p>
+    <p>Locale: {{ context?.locale }}</p>
     <p>Users: {{ users.length }}</p>
   </div>
 </template>
@@ -75,49 +142,62 @@ npm install @haexhub/sdk
 ```tsx
 import { useHaexHub } from '@haexhub/sdk/react';
 import { useEffect, useState } from 'react';
+import manifest from './manifest.json';
 
 interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
 }
 
 function App() {
-  const { extensionInfo, context, db, getTableName } = useHaexHub({ debug: true });
+  const { client, context, getTableName } = useHaexHub({ manifest });
   const [users, setUsers] = useState<User[]>([]);
 
+  // React to context changes (theme/locale from HaexHub)
   useEffect(() => {
-    if (!extensionInfo) return;
+    if (context) {
+      console.log('Theme:', context.theme);  // 'light' or 'dark'
+      console.log('Locale:', context.locale); // 'en', 'de', etc.
 
+      // Update your app's theme
+      document.documentElement.classList.toggle('dark', context.theme === 'dark');
+    }
+  }, [context]);
+
+  useEffect(() => {
     async function initializeDatabase() {
       // Create your own table - no permissions needed!
       // Tables are automatically namespaced with your extension's publicKey
       const tableName = getTableName('users');
 
-      await db.createTable(tableName, `
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL
+      await client.execute(`
+        CREATE TABLE IF NOT EXISTS ${tableName} (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT UNIQUE NOT NULL
+        )
       `);
 
       // Full read/write access to your own tables
-      await db.insert(tableName, {
-        name: 'John Doe',
-        email: 'john@example.com'
-      });
+      await client.execute(
+        `INSERT INTO ${tableName} (id, name, email) VALUES (?, ?, ?)`,
+        [crypto.randomUUID(), 'John Doe', 'john@example.com']
+      );
 
       // Query users
-      const result = await db.query<User>(`SELECT * FROM ${tableName}`);
+      const result = await client.query<User>(`SELECT * FROM ${tableName}`);
       setUsers(result);
     }
 
     initializeDatabase();
-  }, [extensionInfo, db, getTableName]);
+  }, [client, getTableName]);
 
   return (
     <div>
-      <h1>{extensionInfo?.name}</h1>
+      <h1>My Extension</h1>
       <p>Theme: {context?.theme}</p>
+      <p>Locale: {context?.locale}</p>
       <ul>
         {users.map(user => (
           <li key={user.id}>{user.name} - {user.email}</li>
@@ -139,50 +219,59 @@ export default App;
 npm install @haexhub/sdk
 ```
 
-**src/routes/+layout.svelte** (initialize once):
 ```svelte
 <script lang="ts">
-  import { initHaexHub } from '@haexhub/sdk/svelte';
-
-  // Initialize SDK once at app root
-  initHaexHub({ debug: true });
-</script>
-
-<slot />
-```
-
-**src/routes/+page.svelte**:
-```svelte
-<script lang="ts">
-  import { extensionInfo, context, haexHub } from '@haexhub/sdk/svelte';
   import { onMount } from 'svelte';
+  import { initHaexHub, haexHub, context } from '@haexhub/sdk/svelte';
+  import manifest from '../haextension/manifest.json';
 
   let users = [];
 
-  onMount(async () => {
+  onMount(() => {
+    // Initialize SDK with manifest
+    initHaexHub({ manifest });
+  });
+
+  // React to context changes (theme/locale from HaexHub)
+  $: if ($context) {
+    console.log('Theme:', $context.theme);  // 'light' or 'dark'
+    console.log('Locale:', $context.locale); // 'en', 'de', etc.
+
+    // Update your app's theme
+    document.documentElement.classList.toggle('dark', $context.theme === 'dark');
+  }
+
+  async function loadUsers() {
     // Create your own table - no permissions needed!
     // Tables are automatically namespaced with your extension's publicKey
     const tableName = haexHub.getTableName('users');
 
-    await haexHub.db.createTable(tableName, `
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL
+    await haexHub.client.execute(`
+      CREATE TABLE IF NOT EXISTS ${tableName} (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL
+      )
     `);
 
     // Full read/write access to your own tables
-    await haexHub.db.insert(tableName, {
-      name: 'John Doe',
-      email: 'john@example.com'
-    });
+    await haexHub.client.execute(
+      `INSERT INTO ${tableName} (id, name, email) VALUES (?, ?, ?)`,
+      [crypto.randomUUID(), 'John Doe', 'john@example.com']
+    );
 
-    users = await haexHub.db.query(`SELECT * FROM ${tableName}`);
+    users = await haexHub.client.query(`SELECT * FROM ${tableName}`);
+  }
+
+  onMount(() => {
+    loadUsers();
   });
 </script>
 
 <!-- Automatically reactive with $ syntax! -->
-<h1>{$extensionInfo?.name}</h1>
+<h1>My Extension</h1>
 <p>Theme: {$context?.theme}</p>
+<p>Locale: {$context?.locale}</p>
 
 <ul>
   {#each users as user}
@@ -202,31 +291,40 @@ npm install @haexhub/sdk
 
 ```typescript
 import { createHaexHubClient } from '@haexhub/sdk';
+import manifest from '../haextension/manifest.json';
 
-const client = createHaexHubClient({ debug: true });
+const client = createHaexHubClient({ manifest });
 
-// Subscribe to changes
+// Subscribe to context changes (theme/locale from HaexHub)
 client.subscribe(() => {
-  console.log('Extension info:', client.extensionInfo);
-  console.log('Context:', client.context);
+  const context = client.context;
+  if (context) {
+    console.log('Theme:', context.theme);  // 'light' or 'dark'
+    console.log('Locale:', context.locale); // 'en', 'de', etc.
+
+    // Update your app's theme
+    document.documentElement.classList.toggle('dark', context.theme === 'dark');
+  }
 });
 
 // Create your own table - no permissions needed!
 // Tables are automatically namespaced with your extension's publicKey
 const tableName = client.getTableName('users');
-await client.db.createTable(tableName, `
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL
+await client.execute(`
+  CREATE TABLE IF NOT EXISTS ${tableName} (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL
+  )
 `);
 
 // Full read/write access to your own tables
-const userId = await client.db.insert(tableName, {
-  name: 'John Doe',
-  email: 'john@example.com'
-});
+await client.execute(
+  `INSERT INTO ${tableName} (id, name, email) VALUES (?, ?, ?)`,
+  [crypto.randomUUID(), 'John Doe', 'john@example.com']
+);
 
-const users = await client.db.query(`SELECT * FROM ${tableName}`);
+const users = await client.query(`SELECT * FROM ${tableName}`);
 console.log(users);
 ```
 
@@ -279,7 +377,115 @@ You can build your extension using **any framework and any libraries** without w
 
 ## Core Concepts
 
-### 1. Cryptographic Identity
+### 1. Application Context
+
+HaexHub provides an **Application Context** that extensions can subscribe to for reactive updates:
+
+```typescript
+interface ApplicationContext {
+  theme: 'light' | 'dark';   // User's theme preference
+  locale: string;             // User's language (e.g., 'en', 'de', 'fr')
+}
+```
+
+**Framework-specific subscription examples:**
+
+<details>
+<summary><b>Vue 3 / Nuxt</b></summary>
+
+```vue
+<script setup lang="ts">
+import { watch } from 'vue';
+import { useHaexHub } from '@haexhub/sdk/vue';
+import manifest from './manifest.json';
+
+const { context } = useHaexHub({ manifest });
+
+watch(() => context.value, (ctx) => {
+  if (ctx) {
+    // Update theme
+    document.documentElement.classList.toggle('dark', ctx.theme === 'dark');
+
+    // Update i18n locale
+    // i18n.locale.value = ctx.locale;
+  }
+}, { immediate: true });
+</script>
+```
+</details>
+
+<details>
+<summary><b>React</b></summary>
+
+```tsx
+import { useEffect } from 'react';
+import { useHaexHub } from '@haexhub/sdk/react';
+import manifest from './manifest.json';
+
+function App() {
+  const { context } = useHaexHub({ manifest });
+
+  useEffect(() => {
+    if (context) {
+      // Update theme
+      document.documentElement.classList.toggle('dark', context.theme === 'dark');
+
+      // Update i18n language
+      // i18n.changeLanguage(context.locale);
+    }
+  }, [context]);
+
+  return <div>Theme: {context?.theme}</div>;
+}
+```
+</details>
+
+<details>
+<summary><b>Svelte</b></summary>
+
+```svelte
+<script lang="ts">
+  import { initHaexHub, context } from '@haexhub/sdk/svelte';
+  import manifest from '../haextension/manifest.json';
+
+  initHaexHub({ manifest });
+
+  // Reactive statement - runs whenever $context changes
+  $: if ($context) {
+    // Update theme
+    document.documentElement.classList.toggle('dark', $context.theme === 'dark');
+  }
+</script>
+
+<p>Theme: {$context?.theme}</p>
+<p>Locale: {$context?.locale}</p>
+```
+</details>
+
+<details>
+<summary><b>Vanilla JS / Vite</b></summary>
+
+```typescript
+import { createHaexHubClient } from '@haexhub/sdk';
+import manifest from '../haextension/manifest.json';
+
+const client = createHaexHubClient({ manifest });
+
+// Subscribe to context changes
+client.subscribe(() => {
+  const context = client.context;
+  if (context) {
+    // Update theme
+    document.documentElement.classList.toggle('dark', context.theme === 'dark');
+
+    // Update language
+    // updateLanguage(context.locale);
+  }
+});
+```
+</details>
+
+### 2. Cryptographic Identity
 
 Each extension is identified by a **public key**, not by name or namespace.
 
