@@ -181,7 +181,8 @@ export class HaexHubClient {
     const { publicKey, name } = this._extensionInfo;
     const extensionName = name;
 
-    return `${publicKey}${TABLE_SEPARATOR}${extensionName}${TABLE_SEPARATOR}${tableName}`;
+    // Return table name wrapped in double quotes to handle special characters (like hyphens in extension names)
+    return `"${publicKey}${TABLE_SEPARATOR}${extensionName}${TABLE_SEPARATOR}${tableName}"`;
   }
 
   public getDependencyTableName(
@@ -193,7 +194,8 @@ export class HaexHubClient {
     this.validateExtensionName(extensionName);
     this.validateTableName(tableName);
 
-    return `${publicKey}${TABLE_SEPARATOR}${extensionName}${TABLE_SEPARATOR}${tableName}`;
+    // Return table name wrapped in double quotes to handle special characters
+    return `"${publicKey}${TABLE_SEPARATOR}${extensionName}${TABLE_SEPARATOR}${tableName}"`;
   }
 
   public parseTableName(fullTableName: string): {
@@ -201,7 +203,13 @@ export class HaexHubClient {
     extensionName: string;
     tableName: string;
   } | null {
-    const parts = fullTableName.split(TABLE_SEPARATOR);
+    // Remove surrounding quotes if present
+    let cleanTableName = fullTableName;
+    if (cleanTableName.startsWith('"') && cleanTableName.endsWith('"')) {
+      cleanTableName = cleanTableName.slice(1, -1);
+    }
+
+    const parts = cleanTableName.split(TABLE_SEPARATOR);
 
     if (parts.length !== 3) {
       return null;
