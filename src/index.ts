@@ -53,9 +53,10 @@ export {
 } from './config';
 
 import { HaexHubClient } from "./client";
+import type { HaexHubConfig } from "./types";
 
 export function createHaexHubClient(
-  config: { debug?: boolean; timeout?: number } = {}
+  config: HaexHubConfig = {}
 ) {
   return new HaexHubClient(config);
 }
