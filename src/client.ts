@@ -228,6 +228,49 @@ export class HaexHubClient {
     };
   }
 
+  /**
+   * Execute a raw SQL query (SELECT)
+   * Returns rows as an array of objects
+   */
+  public async query<T = Record<string, unknown>>(
+    sql: string,
+    params: unknown[] = []
+  ): Promise<T[]> {
+    const result = await this.request<DatabaseQueryResult>(
+      "haextension.db.query",
+      { query: sql, params }
+    );
+    return result.rows as T[];
+  }
+
+  /**
+   * Alias for query() - more intuitive for SELECT statements
+   */
+  public async select<T = Record<string, unknown>>(
+    sql: string,
+    params: unknown[] = []
+  ): Promise<T[]> {
+    return this.query<T>(sql, params);
+  }
+
+  /**
+   * Execute a raw SQL statement (INSERT, UPDATE, DELETE, CREATE, etc.)
+   * Returns rowsAffected and lastInsertId
+   */
+  public async execute(
+    sql: string,
+    params: unknown[] = []
+  ): Promise<{ rowsAffected: number; lastInsertId?: number }> {
+    const result = await this.request<DatabaseQueryResult>(
+      "haextension.db.execute",
+      { query: sql, params }
+    );
+    return {
+      rowsAffected: result.rowsAffected,
+      lastInsertId: result.lastInsertId,
+    };
+  }
+
   public async requestDatabasePermission(
     request: DatabasePermissionRequest
   ): Promise<PermissionResponse> {
