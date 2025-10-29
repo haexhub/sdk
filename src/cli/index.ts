@@ -88,15 +88,17 @@ program
 
       // 4. Create/update .gitignore
       const gitignorePath = path.join(cwd, ".gitignore");
+      // Remove leading ./ from dir path for gitignore
+      const gitignoreDir = options.dir.replace(/^\.\//, '');
       const gitignoreEntries = [
         "\n# HaexHub Extension",
-        `${options.dir}/private.key`,
+        `${gitignoreDir}/private.key`,
         "*.haextension",
       ];
 
       if (existsSync(gitignorePath)) {
         const existing = await fs.readFile(gitignorePath, "utf-8");
-        if (!existing.includes(`${options.dir}/private.key`)) {
+        if (!existing.includes(`${gitignoreDir}/private.key`)) {
           await fs.appendFile(gitignorePath, gitignoreEntries.join("\n"));
           console.log("✓ Updated .gitignore");
         }
