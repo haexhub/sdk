@@ -17,6 +17,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   // 2. Erstelle einen reaktiven Container (shallowRef ist performant)
   const state = shallowRef({
     isReady: false,
+    isSetupComplete: false,
     context: client.context,
   });
 
@@ -27,6 +28,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   console.log('[Nuxt Plugin] Client ready, context:', client.context);
   state.value = {
     isReady: true,
+    isSetupComplete: false,
     context: client.context,
   };
   console.log('[Nuxt Plugin] Initial state set:', state.value);
@@ -42,7 +44,16 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     console.log('[Nuxt Plugin] State updated:', state.value);
   });
 
-  // 6. Stelle den Client und den reaktiven State bereit
+  // 6. Warte auf Setup-Completion (läuft in background, blockiert Plugin nicht)
+  client.setupComplete().then(() => {
+    console.log('[Nuxt Plugin] Setup complete');
+    state.value = {
+      ...state.value,
+      isSetupComplete: true,
+    };
+  });
+
+  // 7. Stelle den Client und den reaktiven State bereit
   return {
     provide: {
       haexhub: {

@@ -46,6 +46,7 @@ export function useHaexHub(config: HaexHubConfig = {}) {
   const [context, setContext] = useState<ApplicationContext | null>(
     clientInstance.context
   );
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
 
   useEffect(() => {
     // Subscribe to SDK changes
@@ -58,6 +59,12 @@ export function useHaexHub(config: HaexHubConfig = {}) {
     setExtensionInfo(clientInstance!.extensionInfo);
     setContext(clientInstance!.context);
 
+    // Wait for setup completion
+    clientInstance!.setupComplete().then(() => {
+      console.log('[React Hook] Setup complete');
+      setIsSetupComplete(true);
+    });
+
     return unsubscribe;
   }, []);
 
@@ -65,6 +72,7 @@ export function useHaexHub(config: HaexHubConfig = {}) {
     client: clientInstance,
     extensionInfo,
     context,
+    isSetupComplete,
     db: clientInstance.db,
     storage: clientInstance.storage,
     getTableName: clientInstance.getTableName.bind(clientInstance),

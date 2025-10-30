@@ -45,6 +45,10 @@ export class HaexHubClient {
   private readyPromise: Promise<void>;
   private resolveReady!: () => void; // Wird im Konstruktor initialisiert
 
+  private setupPromise: Promise<void> | null = null;
+  private setupHook: (() => Promise<void>) | null = null;
+  private setupCompleted = false;
+
   public db: SqliteRemoteDatabase<Record<string, unknown>> | null = null;
   public readonly storage: StorageAPI;
 
@@ -73,6 +77,51 @@ export class HaexHubClient {
    */
   public async ready(): Promise<void> {
     return this.readyPromise;
+  }
+
+  /**
+   * Registriert eine Setup-Funktion, die nach der Initialisierung ausgeführt wird.
+   * Diese Funktion sollte für Aufgaben wie Tabellenerstellung, Migrationen, etc. verwendet werden.
+   * @param setupFn Die Setup-Funktion, die ausgeführt werden soll
+   */
+  public onSetup(setupFn: () => Promise<void>): void {
+    if (this.setupHook) {
+      throw new Error('Setup hook already registered');
+    }
+    this.setupHook = setupFn;
+  }
+
+  /**
+   * Gibt ein Promise zurück, das aufgelöst wird, sobald der Client vollständig eingerichtet ist.
+   * Dies umfasst die Initialisierung UND das Setup (z.B. Tabellenerstellung).
+   * Falls kein Setup-Hook registriert wurde, entspricht dies ready().
+   */
+  public async setupComplete(): Promise<void> {
+    await this.readyPromise;
+
+    if (!this.setupHook || this.setupCompleted) {
+      return;
+    }
+
+    if (!this.setupPromise) {
+      this.setupPromise = this.runSetupAsync();
+    }
+
+    return this.setupPromise;
+  }
+
+  private async runSetupAsync(): Promise<void> {
+    if (!this.setupHook) return;
+
+    try {
+      this.log('[HaexHub] Running setup hook...');
+      await this.setupHook();
+      this.setupCompleted = true;
+      this.log('[HaexHub] Setup completed successfully');
+    } catch (error) {
+      this.log('[HaexHub] Setup failed:', error);
+      throw error;
+    }
   }
 
   /**

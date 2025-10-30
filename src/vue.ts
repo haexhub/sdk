@@ -26,6 +26,7 @@ import type { ExtensionInfo, ApplicationContext, HaexHubConfig } from './types';
 let clientInstance: HaexHubClient | null = null;
 let extensionInfo: Ref<ExtensionInfo | null> | null = null;
 let context: Ref<ApplicationContext | null> | null = null;
+let isSetupComplete: Ref<boolean> | null = null;
 
 /**
  * Vue 3 composable for HaexHub SDK
@@ -42,6 +43,7 @@ export function useHaexHub(config: HaexHubConfig = {}) {
     clientInstance = createHaexHubClient(config);
     extensionInfo = ref<ExtensionInfo | null>(clientInstance.extensionInfo);
     context = ref<ApplicationContext | null>(clientInstance.context);
+    isSetupComplete = ref<boolean>(false);
 
     // Subscribe to SDK changes and update reactive refs
     clientInstance.subscribe(() => {
@@ -52,12 +54,21 @@ export function useHaexHub(config: HaexHubConfig = {}) {
         context.value = clientInstance!.context;
       }
     });
+
+    // Wait for setup completion
+    clientInstance.setupComplete().then(() => {
+      console.log('[Vue Composable] Setup complete');
+      if (isSetupComplete) {
+        isSetupComplete.value = true;
+      }
+    });
   }
 
   return {
     client: clientInstance,
     extensionInfo: readonly(extensionInfo!),
     context: readonly(context!),
+    isSetupComplete: readonly(isSetupComplete!),
     db: clientInstance.db,
     storage: clientInstance.storage,
     getTableName: clientInstance.getTableName.bind(clientInstance),

@@ -30,6 +30,7 @@ let clientInstance: HaexHubClient | null = null;
 // Writable stores
 const extensionInfoStore = writable<ExtensionInfo | null>(null);
 const contextStore = writable<ApplicationContext | null>(null);
+const isSetupCompleteStore = writable<boolean>(false);
 
 /**
  * Initialize the HaexHub SDK for Svelte
@@ -45,11 +46,18 @@ export function initHaexHub(config: HaexHubConfig = {}) {
     // Set initial values
     extensionInfoStore.set(clientInstance.extensionInfo);
     contextStore.set(clientInstance.context);
+    isSetupCompleteStore.set(false);
 
     // Subscribe to SDK changes and update stores
     clientInstance.subscribe(() => {
       extensionInfoStore.set(clientInstance!.extensionInfo);
       contextStore.set(clientInstance!.context);
+    });
+
+    // Wait for setup completion
+    clientInstance.setupComplete().then(() => {
+      console.log('[Svelte Store] Setup complete');
+      isSetupCompleteStore.set(true);
     });
   }
 
@@ -69,6 +77,13 @@ export const extensionInfo: Readable<ExtensionInfo | null> = svelteReadonly(exte
  * Subscribe using $context in components
  */
 export const context: Readable<ApplicationContext | null> = svelteReadonly(contextStore);
+
+/**
+ * Svelte store for setup completion status (readonly)
+ *
+ * Subscribe using $isSetupComplete in components
+ */
+export const isSetupComplete: Readable<boolean> = svelteReadonly(isSetupCompleteStore);
 
 /**
  * Get the raw HaexHub client instance
