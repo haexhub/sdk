@@ -164,6 +164,12 @@ export class HaexHubClient {
           });
 
           console.log('[SDK] Raw result from Rust:', JSON.stringify(result, null, 2));
+          console.log('[SDK] result.rows:', result.rows);
+          console.log('[SDK] result.rows.length:', result.rows?.length);
+          if (result.rows && result.rows.length > 0) {
+            console.log('[SDK] First row:', result.rows[0]);
+            console.log('[SDK] First row type:', Array.isArray(result.rows[0]) ? 'ARRAY' : 'OBJECT');
+          }
           const rows = result.rows as any[];
 
           if (method === "get") {
