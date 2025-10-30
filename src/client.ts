@@ -98,13 +98,7 @@ export class HaexHubClient {
         method: "get" | "run" | "all" | "values"
       ) => {
         try {
-          // Log SQL for debugging
-          this.log(`[Drizzle Proxy] SQL: ${sql}`);
-          this.log(`[Drizzle Proxy] Params: ${JSON.stringify(params)}`);
-          this.log(`[Drizzle Proxy] Method: ${method}`);
-
           if (method === "run") {
-            // 'run' (INSERT, UPDATE, DELETE) auf 'haextension.db.execute' mappen
             const result = await this.request<DatabaseQueryResult>(
               "haextension.db.execute",
               {
@@ -112,46 +106,25 @@ export class HaexHubClient {
                 params: params as unknown[],
               }
             );
-            this.log(`[Drizzle Proxy] RUN Result:`, result);
-            // Drizzle erwartet { rowsAffected, lastInsertId }
             return result;
           }
 
-          // 'get', 'all', 'values' mappen wir auf 'haextension.db.query'
           const result = await this.request<DatabaseQueryResult>("haextension.db.query", {
             query: sql,
             params: params as unknown[],
           });
 
-          // Drizzle erwartet die rohen Daten-Arrays
           const rows = result.rows as any[];
-          this.log(`[Drizzle Proxy] Result:`, result);
-          this.log(`[Drizzle Proxy] Rows type:`, Array.isArray(rows) ? 'array' : typeof rows);
-          this.log(`[Drizzle Proxy] Rows length:`, rows?.length);
-          this.log(`[Drizzle Proxy] First row:`, rows?.[0]);
-          this.log(`[Drizzle Proxy] First row keys:`, rows?.[0] ? Object.keys(rows[0]) : 'no rows');
-          this.log(`[Drizzle Proxy] First row type:`, Array.isArray(rows?.[0]) ? 'array' : typeof rows?.[0]);
 
-          // WICHTIG: Drizzle erwartet unterschiedliche Return-Formate je nach method!
-          // - "get": { rows: single_object } oder { rows: [] }
-          // - "all": { rows: array }
-          // - "values": { rows: array }
-          // ABER: In HaexHub funktioniert es mit { rows } für alle... warum?
-
-          // TEST: Geben wir direkt rows zurück statt { rows }
           if (method === "get") {
             const returnValue = rows.length > 0 ? rows.at(0) : undefined;
-            this.log(`[Drizzle Proxy] Returning for GET (direct):`, returnValue);
             return { rows: returnValue };
           }
 
-          // Für "all" und "values": Direkt das Array zurückgeben
-          this.log(`[Drizzle Proxy] Returning for ${method} (direct):`, rows);
           return { rows };
         } catch (error) {
-          // Wir nutzen this.log, wie du es implementiert hast
           this.log("Drizzle proxy error:", error);
-          throw error; // Fehler an Drizzle weitergeben
+          throw error;
         }
       },
       schema
