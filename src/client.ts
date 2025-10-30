@@ -183,7 +183,10 @@ export class HaexHubClient {
           throw error;
         }
       },
-      schema
+      {
+        schema: schema,
+        logger: false,
+      }
     );
 
     this.db = dbInstance;
