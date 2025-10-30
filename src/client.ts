@@ -98,6 +98,11 @@ export class HaexHubClient {
         method: "get" | "run" | "all" | "values"
       ) => {
         try {
+          // Log SQL for debugging
+          this.log(`[Drizzle Proxy] SQL: ${sql}`);
+          this.log(`[Drizzle Proxy] Params: ${JSON.stringify(params)}`);
+          this.log(`[Drizzle Proxy] Method: ${method}`);
+
           if (method === "run") {
             // 'run' (INSERT, UPDATE, DELETE) auf 'haextension.db.execute' mappen
             const result = await this.request<DatabaseQueryResult>(
@@ -119,6 +124,7 @@ export class HaexHubClient {
 
           // Drizzle erwartet die rohen Daten-Arrays
           const rows = result.rows as any[];
+          this.log(`[Drizzle Proxy] Rows:`, rows);
 
           if (method === "get") {
             // 'get' will die erste Zeile oder null
