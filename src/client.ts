@@ -132,19 +132,22 @@ export class HaexHubClient {
           this.log(`[Drizzle Proxy] First row keys:`, rows?.[0] ? Object.keys(rows[0]) : 'no rows');
           this.log(`[Drizzle Proxy] First row type:`, Array.isArray(rows?.[0]) ? 'array' : typeof rows?.[0]);
 
-          // Rückgabeformat EXAKT wie HaexHub's drizzleCallback
-          // Siehe: haex-hub/src/stores/vault/index.ts Zeile 183-186
+          // WICHTIG: Drizzle erwartet unterschiedliche Return-Formate je nach method!
+          // - "get": { rows: single_object } oder { rows: [] }
+          // - "all": { rows: array }
+          // - "values": { rows: array }
+          // ABER: In HaexHub funktioniert es mit { rows } für alle... warum?
 
+          // TEST: Geben wir direkt rows zurück statt { rows }
           if (method === "get") {
-            const returnValue = rows.length > 0 ? { rows: rows.at(0) } : { rows };
-            this.log(`[Drizzle Proxy] Returning for GET:`, returnValue);
-            return returnValue;
+            const returnValue = rows.length > 0 ? rows.at(0) : undefined;
+            this.log(`[Drizzle Proxy] Returning for GET (direct):`, returnValue);
+            return { rows: returnValue };
           }
 
-          // Für alle anderen methods (all, values, run): { rows }
-          const returnValue = { rows };
-          this.log(`[Drizzle Proxy] Returning for ${method}:`, returnValue);
-          return returnValue;
+          // Für "all" und "values": Direkt das Array zurückgeben
+          this.log(`[Drizzle Proxy] Returning for ${method} (direct):`, rows);
+          return { rows };
         } catch (error) {
           // Wir nutzen this.log, wie du es implementiert hast
           this.log("Drizzle proxy error:", error);
