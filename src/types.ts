@@ -97,7 +97,8 @@ export interface DatabaseQueryParams {
 }
 
 export interface DatabaseQueryResult {
-  rows: unknown[];
+  rows: unknown[]; // Array of arrays (each row is an array of values)
+  columns?: string[]; // Column names in order
   rowsAffected: number;
   lastInsertId?: number;
 }

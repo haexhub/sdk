@@ -163,6 +163,7 @@ export class HaexHubClient {
             params: params as unknown[],
           });
 
+          console.log('[SDK] Raw result from Rust:', JSON.stringify(result, null, 2));
           const rows = result.rows as any[];
 
           if (method === "get") {
@@ -278,6 +279,7 @@ export class HaexHubClient {
       "haextension.db.query",
       { query: sql, params }
     );
+    console.log('[SDK query()] Raw result:', JSON.stringify(result, null, 2));
     return result.rows as T[];
   }
 
