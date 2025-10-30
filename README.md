@@ -54,6 +54,238 @@ npm run ext:dev
 npm run ext:build
 ```
 
+## Setup Hook System
+
+**Important:** Always use the setup hook system to initialize your extension (create tables, run migrations, etc.). This ensures all database tables are created before your app tries to query them.
+
+### Why Use Setup Hooks?
+
+Without setup hooks, your app might try to query tables before they exist, causing race conditions. The setup hook system guarantees:
+- ✅ Tables are created before queries run
+- ✅ Migrations complete before app loads
+- ✅ No race conditions on first load
+- ✅ Clean separation of setup logic
+
+### How to Use
+
+<details>
+<summary><b>Nuxt/Vue</b> - Setup in app.vue</summary>
+
+```vue
+<!-- app/app.vue -->
+<template>
+  <div v-if="isSetupComplete">
+    <NuxtPage />  <!-- or your app content -->
+  </div>
+  <div v-else>
+    <p>Initializing extension...</p>
+  </div>
+</template>
+
+<script setup lang="ts">
+const isSetupComplete = ref(false);
+
+onMounted(async () => {
+  const { client } = useHaexHub();
+
+  // Register setup function (runs once after SDK initialization)
+  // This is where you create tables, run migrations, etc.
+  client.onSetup(async () => {
+    console.log('[Setup] Creating database tables...');
+
+    // Example: Create tables using raw SQL
+    const tableName = client.getTableName('demo_table');
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS ${tableName} (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Or with Drizzle ORM:
+    // await createTablesAsync(client);
+
+    console.log('[Setup] Database tables created successfully');
+  });
+
+  // Wait for setup to complete before showing the app
+  console.log('[app.vue] Waiting for setup completion...');
+  await client.setupComplete();
+  console.log('[app.vue] Setup complete, app ready');
+
+  isSetupComplete.value = true;
+});
+</script>
+```
+
+</details>
+
+<details>
+<summary><b>React</b> - Setup in App component</summary>
+
+```tsx
+// src/App.tsx
+import { useState, useEffect } from 'react';
+import { useHaexHub } from '@haexhub/sdk/react';
+import manifest from './manifest.json';
+
+function App() {
+  const { client, getTableName, isSetupComplete } = useHaexHub({ manifest });
+
+  // Register setup hook to initialize database
+  useEffect(() => {
+    if (!client) return;
+
+    // Register setup function (runs once after SDK initialization)
+    client.onSetup(async () => {
+      console.log('[Setup] Creating database tables...');
+
+      // Example: Create tables using raw SQL
+      const tableName = getTableName('demo_table');
+      await client.execute(`
+        CREATE TABLE IF NOT EXISTS ${tableName} (
+          id TEXT PRIMARY KEY,
+          name TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      console.log('[Setup] Database tables created successfully');
+    });
+  }, [client, getTableName]);
+
+  // Show loading screen until setup completes
+  if (!isSetupComplete) {
+    return <div>Initializing extension...</div>;
+  }
+
+  return (
+    <div>
+      {/* Your app content */}
+    </div>
+  );
+}
+```
+
+</details>
+
+<details>
+<summary><b>Svelte</b> - Setup in root component</summary>
+
+```svelte
+<!-- src/App.svelte -->
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { initHaexHub, haexHub, isSetupComplete } from '@haexhub/sdk/svelte';
+  import manifest from '../haextension/manifest.json';
+
+  onMount(async () => {
+    // Initialize SDK with manifest
+    initHaexHub({ manifest });
+
+    // Register setup function (runs once after SDK initialization)
+    haexHub.client.onSetup(async () => {
+      console.log('[Setup] Creating database tables...');
+
+      const tableName = haexHub.getTableName('demo_table');
+      await haexHub.client.execute(`
+        CREATE TABLE IF NOT EXISTS ${tableName} (
+          id TEXT PRIMARY KEY,
+          name TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      console.log('[Setup] Database tables created successfully');
+    });
+  });
+</script>
+
+{#if $isSetupComplete}
+  <div>
+    <!-- Your app content -->
+  </div>
+{:else}
+  <p>Initializing extension...</p>
+{/if}
+```
+
+</details>
+
+<details>
+<summary><b>Vite (Vanilla JS/TS)</b> - Setup in main.ts</summary>
+
+```typescript
+// src/main.ts
+import { createHaexHubClient } from '@haexhub/sdk';
+import manifest from '../haextension/manifest.json';
+
+const client = createHaexHubClient({ manifest });
+
+// Register setup function (runs once after SDK initialization)
+client.onSetup(async () => {
+  console.log('[Setup] Creating database tables...');
+
+  const tableName = client.getTableName('demo_table');
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS ${tableName} (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  console.log('[Setup] Database tables created successfully');
+});
+
+// Wait for setup to complete before rendering app
+await client.setupComplete();
+console.log('[main.ts] Setup complete, rendering app');
+
+// Now render your app
+document.querySelector('#app')!.innerHTML = `
+  <h1>My Extension</h1>
+`;
+```
+
+</details>
+
+### Using with Drizzle ORM
+
+For complex schemas, create a separate setup file:
+
+```typescript
+// database/createTables.ts
+export async function createTablesAsync(client: HaexHubClient) {
+  console.log('[Setup] Creating database tables...');
+
+  const tables = [
+    { table: schema.users, name: 'users' },
+    { table: schema.posts, name: 'posts' },
+    // ... more tables
+  ];
+
+  for (const { table, name } of tables) {
+    const config = getTableConfig(table);
+    const tableName = config.name;
+
+    const createTableSQL = `CREATE TABLE IF NOT EXISTS "${tableName}" (...)`;
+    await client.execute(createTableSQL, []);
+
+    console.log(`[Setup] ✓ Table ${name} created/verified`);
+  }
+}
+```
+
+Then use it in your setup hook:
+
+```typescript
+client.onSetup(async () => {
+  await createTablesAsync(client);
+});
+```
+
 ## Demo Projects
 
 Complete working examples for each framework:
@@ -64,6 +296,7 @@ Complete working examples for each framework:
 - **Vite**: [github.com/haexhub/haex-demo-vite](https://github.com/haexhub/haex-demo-vite)
 
 Each demo shows:
+- ✅ **Setup Hook System** - Proper initialization with table creation
 - ✅ Database operations (CREATE, INSERT, SELECT)
 - ✅ Application context subscription (theme & locale)
 - ✅ Manifest loading
