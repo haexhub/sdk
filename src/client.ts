@@ -112,6 +112,7 @@ export class HaexHubClient {
                 params: params as unknown[],
               }
             );
+            this.log(`[Drizzle Proxy] RUN Result:`, result);
             // Drizzle erwartet { rowsAffected, lastInsertId }
             return result;
           }
