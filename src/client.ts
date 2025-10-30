@@ -124,19 +124,27 @@ export class HaexHubClient {
 
           // Drizzle erwartet die rohen Daten-Arrays
           const rows = result.rows as any[];
-          this.log(`[Drizzle Proxy] Rows:`, rows);
+          this.log(`[Drizzle Proxy] Result:`, result);
+          this.log(`[Drizzle Proxy] Rows type:`, Array.isArray(rows) ? 'array' : typeof rows);
+          this.log(`[Drizzle Proxy] Rows length:`, rows?.length);
+          this.log(`[Drizzle Proxy] First row:`, rows?.[0]);
+          this.log(`[Drizzle Proxy] First row type:`, Array.isArray(rows?.[0]) ? 'array' : typeof rows?.[0]);
 
           if (method === "get") {
             // 'get' will die erste Zeile oder null
+            this.log(`[Drizzle Proxy] Returning for GET:`, rows[0] ?? null);
             return rows[0] ?? null;
           }
 
           if (method === "values") {
             // 'values' will ein Array von Arrays (Zeilen -> Werte)
-            return rows.map((row) => Object.values(row));
+            const values = rows.map((row) => Object.values(row));
+            this.log(`[Drizzle Proxy] Returning for VALUES:`, values);
+            return values;
           }
 
           // 'all' will ein Array von Objekten (Zeilen)
+          this.log(`[Drizzle Proxy] Returning for ALL:`, rows);
           return rows;
         } catch (error) {
           // Wir nutzen this.log, wie du es implementiert hast
