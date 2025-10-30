@@ -129,6 +129,7 @@ export class HaexHubClient {
           this.log(`[Drizzle Proxy] Rows type:`, Array.isArray(rows) ? 'array' : typeof rows);
           this.log(`[Drizzle Proxy] Rows length:`, rows?.length);
           this.log(`[Drizzle Proxy] First row:`, rows?.[0]);
+          this.log(`[Drizzle Proxy] First row keys:`, rows?.[0] ? Object.keys(rows[0]) : 'no rows');
           this.log(`[Drizzle Proxy] First row type:`, Array.isArray(rows?.[0]) ? 'array' : typeof rows?.[0]);
 
           // Rückgabeformat EXAKT wie HaexHub's drizzleCallback
