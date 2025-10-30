@@ -131,22 +131,28 @@ export class HaexHubClient {
           this.log(`[Drizzle Proxy] First row:`, rows?.[0]);
           this.log(`[Drizzle Proxy] First row type:`, Array.isArray(rows?.[0]) ? 'array' : typeof rows?.[0]);
 
+          // WICHTIG: AsyncRemoteCallback muss immer { rows: ... } zurückgeben
+          // Siehe drizzle-orm/sqlite-proxy/driver.d.ts und HaexHub's drizzleCallback
+
           if (method === "get") {
-            // 'get' will die erste Zeile oder null
-            this.log(`[Drizzle Proxy] Returning for GET:`, rows[0] ?? null);
-            return rows[0] ?? null;
+            // 'get' will die erste Zeile in { rows: firstRow }
+            const getResult = rows.length > 0 ? { rows: rows.at(0) } : { rows: [] };
+            this.log(`[Drizzle Proxy] Returning for GET:`, getResult);
+            return getResult;
           }
 
           if (method === "values") {
-            // 'values' will ein Array von Arrays (Zeilen -> Werte)
+            // 'values' will ein Array von Arrays (Zeilen -> nur Werte)
             const values = rows.map((row) => Object.values(row));
-            this.log(`[Drizzle Proxy] Returning for VALUES:`, values);
-            return values;
+            const valuesResult = { rows: values };
+            this.log(`[Drizzle Proxy] Returning for VALUES:`, valuesResult);
+            return valuesResult;
           }
 
-          // 'all' will ein Array von Objekten (Zeilen)
-          this.log(`[Drizzle Proxy] Returning for ALL:`, rows);
-          return rows;
+          // 'all' will ein Array von Objekten (alle Zeilen) in { rows: [...] }
+          const allResult = { rows };
+          this.log(`[Drizzle Proxy] Returning for ALL:`, allResult);
+          return allResult;
         } catch (error) {
           // Wir nutzen this.log, wie du es implementiert hast
           this.log("Drizzle proxy error:", error);
