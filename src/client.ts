@@ -19,6 +19,7 @@ import {
   HaexHubError,
 } from "./types";
 import { StorageAPI } from "./api/storage";
+import { DatabaseAPI } from "./api/database";
 import { installConsoleForwarding } from "./polyfills/consoleForwarding";
 import { drizzle, type SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 
@@ -49,8 +50,9 @@ export class HaexHubClient {
   private setupHook: (() => Promise<void>) | null = null;
   private setupCompleted = false;
 
-  public db: SqliteRemoteDatabase<Record<string, unknown>> | null = null;
+  public orm: SqliteRemoteDatabase<Record<string, unknown>> | null = null;
   public readonly storage: StorageAPI;
+  public readonly database: DatabaseAPI;
 
   constructor(config: HaexHubConfig = {}) {
     this.config = {
@@ -60,6 +62,7 @@ export class HaexHubClient {
     };
 
     this.storage = new StorageAPI(this);
+    this.database = new DatabaseAPI(this);
 
     // Install console forwarding if in debug mode
     installConsoleForwarding(this.config.debug);
@@ -182,7 +185,7 @@ export class HaexHubClient {
       }
     );
 
-    this.db = dbInstance;
+    this.orm = dbInstance;
     return dbInstance;
   }
 
@@ -311,6 +314,25 @@ export class HaexHubClient {
       rowsAffected: result.rowsAffected,
       lastInsertId: result.lastInsertId,
     };
+  }
+
+  /**
+   * Runs database migrations for an extension
+   * @param extensionPublicKey - The public key of the extension
+   * @param extensionName - The name of the extension
+   * @param migrations - Array of migration objects with name and SQL content
+   * @returns Promise that resolves when all migrations are applied
+   */
+  public async runMigrationsAsync(
+    extensionPublicKey: string,
+    extensionName: string,
+    migrations: Array<{ name: string; sql: string }>
+  ): Promise<void> {
+    return this.database.runMigrationsAsync(
+      extensionPublicKey,
+      extensionName,
+      migrations
+    );
   }
 
   public async requestDatabasePermission(
