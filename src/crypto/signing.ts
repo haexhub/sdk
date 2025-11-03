@@ -6,6 +6,8 @@ import * as path from "path";
 import archiver from "archiver";
 import { getExtensionDir } from "~/config";
 
+export const EXTENSION_FILE_EXTENSION = ".xt";
+
 export class ExtensionSigner {
   /**
    * Generiert ein Ed25519 Keypair
@@ -192,7 +194,7 @@ export class ExtensionSigner {
 
     // 6. Das Verzeichnis zippen und haextension.config.json + haextension/ Ordner hinzufügen
     const finalOutputPath =
-      outputPath || `${manifest.name}-${manifest.version}.haextension`;
+      outputPath || `${manifest.name}-${manifest.version}${EXTENSION_FILE_EXTENSION}`;
     const output = fsSync.createWriteStream(finalOutputPath);
     const archive = archiver("zip", { zlib: { level: 9 } });
 

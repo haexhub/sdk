@@ -4,7 +4,7 @@
 import { Command } from "commander";
 import * as fs from "fs/promises";
 import * as path from "path";
-import { ExtensionSigner } from "~/crypto/signing";
+import { ExtensionSigner, EXTENSION_FILE_EXTENSION } from "~/crypto/signing";
 import { existsSync } from "fs";
 
 const program = new Command();
@@ -93,7 +93,7 @@ program
       const gitignoreEntries = [
         "\n# HaexHub Extension",
         `${gitignoreDir}/private.key`,
-        "*.haextension",
+        `*${EXTENSION_FILE_EXTENSION}`,
       ];
 
       if (existsSync(gitignorePath)) {
