@@ -152,4 +152,88 @@ export class DatabaseAPI {
     const result = await this.queryOne<{ count: number }>(query, whereParams);
     return result?.count ?? 0;
   }
+
+  /**
+   * Runs database migrations for an extension
+   * @param extensionPublicKey - The public key of the extension
+   * @param extensionName - The name of the extension
+   * @param migrations - Array of migration objects with name and SQL content
+   * @returns Promise that resolves when all migrations are applied
+   */
+  async runMigrationsAsync(
+    extensionPublicKey: string,
+    extensionName: string,
+    migrations: Array<{ name: string; sql: string }>
+  ): Promise<void> {
+    const tablePrefix = `${extensionPublicKey}__${extensionName}`;
+    const migrationsTableName = `${tablePrefix}__migrations`;
+
+    console.log(`[SDK] Running migrations for extension ${extensionName}`);
+
+    try {
+      // Create migrations tracking table if it doesn't exist
+      await this.execute(`
+        CREATE TABLE IF NOT EXISTS "${migrationsTableName}" (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          applied_at INTEGER NOT NULL
+        )
+      `);
+
+      // Get already applied migrations
+      const appliedMigrations = await this.query<{ name: string }>(
+        `SELECT name FROM "${migrationsTableName}"`
+      );
+      const appliedNames = new Set(appliedMigrations.map((m) => m.name));
+
+      // Apply new migrations
+      for (const migration of migrations) {
+        if (appliedNames.has(migration.name)) {
+          console.log(
+            `[SDK] ↷ Migration ${migration.name} already applied, skipping`
+          );
+          continue;
+        }
+
+        console.log(`[SDK] → Applying migration: ${migration.name}`);
+
+        // Split SQL by statement separator and execute each statement
+        const statements = migration.sql
+          .split("--> statement-breakpoint")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+
+        for (const statement of statements) {
+          try {
+            await this.execute(statement);
+          } catch (error: unknown) {
+            // Ignore "table already exists" errors for backwards compatibility
+            // This handles the case where tables were created manually before migrations
+            if (
+              error instanceof Error &&
+              !error.message?.includes("already exists")
+            ) {
+              throw error;
+            }
+            console.log(
+              `[SDK] ⚠ Ignoring "already exists" error for backwards compatibility`
+            );
+          }
+        }
+
+        // Record migration as applied
+        await this.execute(
+          `INSERT INTO "${migrationsTableName}" (name, applied_at) VALUES (?, ?)`,
+          [migration.name, Date.now()]
+        );
+
+        console.log(`[SDK] ✓ Migration ${migration.name} applied successfully`);
+      }
+
+      console.log(`[SDK] All migrations completed successfully`);
+    } catch (error) {
+      console.error(`[SDK] Error running migrations:`, error);
+      throw error;
+    }
+  }
 }
