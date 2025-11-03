@@ -43,6 +43,11 @@ export default defineNuxtModule<ModuleOptions>({
   async setup(options: ModuleOptions, nuxt: Nuxt) {
     const { resolve } = createResolver(import.meta.url);
 
+    // Add type declaration for $haexhub
+    nuxt.hook('prepare:types', ({ references }) => {
+      references.push({ path: resolve('./runtime/nuxt.types.d.ts') })
+    })
+
     // Read haextension.config.json if available
     const config = readHaextensionConfig(nuxt.options.rootDir);
 
