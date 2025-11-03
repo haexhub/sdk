@@ -284,7 +284,9 @@ export class HaexHubClient {
       "haextension.db.query",
       { query: sql, params }
     );
-    console.log('[SDK query()] Raw result:', JSON.stringify(result, null, 2));
+    if (this.config.debug) {
+      console.log('[SDK query()] Raw result:', JSON.stringify(result, null, 2));
+    }
     return result.rows as T[];
   }
 
@@ -395,13 +397,16 @@ export class HaexHubClient {
 
       // Use wildcard origin since extensions are sandboxed in their own protocol
       const targetOrigin = "*";
-      console.log("[SDK Debug] ========== Sending Request ==========");
-      console.log("[SDK Debug] Request ID:", requestId);
-      console.log("[SDK Debug] Method:", request.method);
-      console.log("[SDK Debug] Params:", request.params);
-      console.log("[SDK Debug] Target origin:", targetOrigin);
-      console.log("[SDK Debug] Extension info:", this._extensionInfo);
-      console.log("[SDK Debug] ========================================");
+
+      if (this.config.debug) {
+        console.log("[SDK Debug] ========== Sending Request ==========");
+        console.log("[SDK Debug] Request ID:", requestId);
+        console.log("[SDK Debug] Method:", request.method);
+        console.log("[SDK Debug] Params:", request.params);
+        console.log("[SDK Debug] Target origin:", targetOrigin);
+        console.log("[SDK Debug] Extension info:", this._extensionInfo);
+        console.log("[SDK Debug] ========================================");
+      }
 
       window.parent.postMessage({ id: requestId, ...request }, targetOrigin);
     });
@@ -485,60 +490,76 @@ export class HaexHubClient {
   }
 
   private handleMessage(event: MessageEvent): void {
-    console.log("[SDK Debug] ========== Message Received ==========");
-    console.log("[SDK Debug] Event origin:", event.origin);
-    console.log(
-      "[SDK Debug] Event source:",
-      event.source === window.parent ? "parent window" : "unknown"
-    );
-    console.log("[SDK Debug] Event data:", event.data);
-    console.log("[SDK Debug] Extension info loaded:", !!this._extensionInfo);
-    console.log(
-      "[SDK Debug] Pending requests count:",
-      this.pendingRequests.size
-    );
+    if (this.config.debug) {
+      console.log("[SDK Debug] ========== Message Received ==========");
+      console.log("[SDK Debug] Event origin:", event.origin);
+      console.log(
+        "[SDK Debug] Event source:",
+        event.source === window.parent ? "parent window" : "unknown"
+      );
+      console.log("[SDK Debug] Event data:", event.data);
+      console.log("[SDK Debug] Extension info loaded:", !!this._extensionInfo);
+      console.log(
+        "[SDK Debug] Pending requests count:",
+        this.pendingRequests.size
+      );
+    }
 
     // Verify message comes from parent window (HaexHub)
     if (event.source !== window.parent) {
-      console.error("[SDK Debug] ❌ REJECTED: Message not from parent window!");
+      if (this.config.debug) {
+        console.error("[SDK Debug] ❌ REJECTED: Message not from parent window!");
+      }
       return;
     }
 
     const data = event.data as HaexHubResponse | HaexHubEvent;
 
     if ("id" in data && this.pendingRequests.has(data.id)) {
-      console.log("[SDK Debug] ✅ Found pending request for ID:", data.id);
+      if (this.config.debug) {
+        console.log("[SDK Debug] ✅ Found pending request for ID:", data.id);
+      }
       const pending = this.pendingRequests.get(data.id)!;
       clearTimeout(pending.timeout);
       this.pendingRequests.delete(data.id);
 
       if (data.error) {
-        console.error("[SDK Debug] ❌ Request failed:", data.error);
+        if (this.config.debug) {
+          console.error("[SDK Debug] ❌ Request failed:", data.error);
+        }
         pending.reject(data.error);
       } else {
-        console.log("[SDK Debug] ✅ Request succeeded:", data.result);
+        if (this.config.debug) {
+          console.log("[SDK Debug] ✅ Request succeeded:", data.result);
+        }
         pending.resolve(data.result);
       }
       return;
     }
 
     if ("id" in data && !this.pendingRequests.has(data.id)) {
-      console.warn(
-        "[SDK Debug] ⚠️ Received response for unknown request ID:",
-        data.id
-      );
-      console.warn(
-        "[SDK Debug] Known IDs:",
-        Array.from(this.pendingRequests.keys())
-      );
+      if (this.config.debug) {
+        console.warn(
+          "[SDK Debug] ⚠️ Received response for unknown request ID:",
+          data.id
+        );
+        console.warn(
+          "[SDK Debug] Known IDs:",
+          Array.from(this.pendingRequests.keys())
+        );
+      }
     }
 
     if ("type" in data && data.type) {
-      console.log("[SDK Debug] Event received:", data.type);
+      if (this.config.debug) {
+        console.log("[SDK Debug] Event received:", data.type);
+      }
       this.handleEvent(data as HaexHubEvent);
     }
 
-    console.log("[SDK Debug] ========== End Message ==========");
+    if (this.config.debug) {
+      console.log("[SDK Debug] ========== End Message ==========");
+    }
   }
 
   private handleEvent(event: HaexHubEvent): void {
