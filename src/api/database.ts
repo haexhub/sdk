@@ -184,7 +184,15 @@ export class DatabaseAPI {
       const appliedMigrations = await this.query<{ name: string }>(
         `SELECT name FROM "${migrationsTableName}"`
       );
-      const appliedNames = new Set(appliedMigrations.map((m) => m.name));
+      // Handle both object format {name: "..."} and array format ["..."]
+      const appliedNames = new Set(
+        appliedMigrations.map((m) => {
+          if (Array.isArray(m)) {
+            return m[0] as string;
+          }
+          return m.name;
+        })
+      );
 
       // Apply new migrations
       for (const migration of migrations) {
