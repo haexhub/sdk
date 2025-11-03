@@ -96,7 +96,7 @@ export const haexHub = {
   },
   get db() {
     if (!clientInstance) throw new Error('HaexHub SDK not initialized. Call initHaexHub() first.');
-    return clientInstance.db;
+    return clientInstance.orm;
   },
   get storage() {
     if (!clientInstance) throw new Error('HaexHub SDK not initialized. Call initHaexHub() first.');

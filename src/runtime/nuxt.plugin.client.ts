@@ -57,7 +57,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   return {
     provide: {
       haexhub: {
-        client, // Der rohe Client (für db.query etc.)
+        client, // Der rohe Client (für client.orm, client.database, etc.)
         state, // Der reaktive State (für die UI)
       },
     },

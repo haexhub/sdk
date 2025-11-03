@@ -766,10 +766,10 @@ Your extension can **freely create, read, write, and delete** its own tables wit
 // ✅ Always works - no permissions needed!
 const myTable = client.getTableName('users');
 
-await client.db.createTable(myTable, '...');  // ✅ Create
-await client.db.query(`SELECT * FROM ${myTable}`);  // ✅ Read
-await client.db.insert(myTable, {...});  // ✅ Write
-await client.db.delete(myTable, 'id = ?', [1]);  // ✅ Delete
+await client.database.createTable(myTable, '...');  // ✅ Create
+await client.database.query(`SELECT * FROM ${myTable}`);  // ✅ Read
+await client.database.insert(myTable, {...});  // ✅ Write
+await client.database.delete(myTable, 'id = ?', [1]);  // ✅ Delete
 ```
 
 **Why this is safe:**
@@ -812,7 +812,7 @@ const depTable = client.getDependencyTableName(
   'credentials'
 );
 
-const creds = await client.db.query(`SELECT * FROM ${depTable}`);
+const creds = await client.database.query(`SELECT * FROM ${depTable}`);
 ```
 
 **Permission Granularity:**
@@ -878,7 +878,7 @@ import { extensionInfo, context, haexHub } from '@haexhub/sdk/svelte';
 
 // In script
 const tableName = haexHub.getTableName('users');
-await haexHub.db.query(`SELECT * FROM ${tableName}`);
+await haexHub.database.query(`SELECT * FROM ${tableName}`);
 ```
 
 ### Core Client API
@@ -942,13 +942,13 @@ const depTable = client.getDependencyTableName(
 
 ```typescript
 // SELECT queries
-const users = await client.db.query<User>(
+const users = await client.database.query<User>(
   `SELECT * FROM ${myTable} WHERE age > ?`,
   [18]
 );
 
 // Single row
-const user = await client.db.queryOne<User>(
+const user = await client.database.queryOne<User>(
   `SELECT * FROM ${myTable} WHERE id = ?`,
   [1]
 );
@@ -958,7 +958,7 @@ const user = await client.db.queryOne<User>(
 
 ```typescript
 // INSERT, UPDATE, DELETE
-const result = await client.db.execute(
+const result = await client.database.execute(
   `INSERT INTO ${myTable} (name) VALUES (?)`,
   ['Alice']
 );
@@ -970,7 +970,7 @@ console.log(result.rowsAffected);
 #### Transactions
 
 ```typescript
-await client.db.transaction([
+await client.database.transaction([
   `INSERT INTO ${myTable} (name) VALUES ('Alice')`,
   `INSERT INTO ${myTable} (name) VALUES ('Bob')`
 ]);
@@ -980,32 +980,32 @@ await client.db.transaction([
 
 ```typescript
 // Create table
-await client.db.createTable('posts', `
+await client.database.createTable('posts', `
   id INTEGER PRIMARY KEY,
   title TEXT NOT NULL,
   content TEXT
 `);
 
 // Check existence
-const exists = await client.db.tableExists(myTable);
+const exists = await client.database.tableExists(myTable);
 
 // Get table info
-const info = await client.db.getTableInfo(myTable);
+const info = await client.database.getTableInfo(myTable);
 
 // List all tables
-const tables = await client.db.listTables();
+const tables = await client.database.listTables();
 
 // Drop table
-await client.db.dropTable('posts');
+await client.database.dropTable('posts');
 
 // Insert
-const id = await client.db.insert(myTable, {
+const id = await client.database.insert(myTable, {
   name: 'John',
   email: 'john@example.com'
 });
 
 // Update
-const updated = await client.db.update(
+const updated = await client.database.update(
   myTable,
   { name: 'Jane' },
   'id = ?',
@@ -1013,10 +1013,10 @@ const updated = await client.db.update(
 );
 
 // Delete
-const deleted = await client.db.delete(myTable, 'id = ?', [id]);
+const deleted = await client.database.delete(myTable, 'id = ?', [id]);
 
 // Count
-const count = await client.db.count(myTable, 'age > ?', [18]);
+const count = await client.database.count(myTable, 'age > ?', [18]);
 ```
 
 ### Storage API
@@ -1384,7 +1384,7 @@ import type {
 import { ErrorCode } from '@haexhub/sdk';
 
 try {
-  await client.db.query(`SELECT * FROM ${someTable}`);
+  await client.database.query(`SELECT * FROM ${someTable}`);
 } catch (error) {
   if (error.code === ErrorCode.PERMISSION_DENIED) {
     console.error('Permission denied');

@@ -69,7 +69,7 @@ export function useHaexHub(config: HaexHubConfig = {}) {
     extensionInfo: readonly(extensionInfo!),
     context: readonly(context!),
     isSetupComplete: readonly(isSetupComplete!),
-    db: clientInstance.db,
+    db: clientInstance.orm,
     storage: clientInstance.storage,
     getTableName: clientInstance.getTableName.bind(clientInstance),
   };
