@@ -1,7 +1,7 @@
 import { defineNuxtPlugin } from "nuxt/app";
-import { shallowRef } from "vue";
+import { shallowRef, type ShallowRef } from "vue";
 import { HaexHubClient } from "~/client";
-import type { ExtensionManifest } from "~/types";
+import type { ExtensionManifest, ApplicationContext } from "~/types";
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   // Get manifest from runtime config (injected by Nuxt module)
@@ -54,12 +54,24 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   });
 
   // 7. Stelle den Client und den reaktiven State bereit
+  const haexhubPlugin = {
+    client, // Der rohe Client (für client.orm, client.database, etc.)
+    state, // Der reaktive State (für die UI)
+  };
+
   return {
     provide: {
-      haexhub: {
-        client, // Der rohe Client (für client.orm, client.database, etc.)
-        state, // Der reaktive State (für die UI)
-      },
+      haexhub: haexhubPlugin,
     },
   };
 });
+
+// Export type for type declarations
+export type HaexHubNuxtPlugin = {
+  client: HaexHubClient;
+  state: ShallowRef<{
+    isReady: boolean;
+    isSetupComplete: boolean;
+    context: ApplicationContext | null;
+  }>;
+};
