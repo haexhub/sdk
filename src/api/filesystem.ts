@@ -46,7 +46,7 @@ export class FilesystemAPI {
     options: SaveFileOptions = {}
   ): Promise<SaveFileResult | null> {
     const result = await this.client.request<SaveFileResult | null>(
-      "filesystem.saveFile",
+      "haextension.fs.saveFile",
       {
         data: Array.from(data), // Convert Uint8Array to regular array for postMessage
         defaultPath: options.defaultPath,
