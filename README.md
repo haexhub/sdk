@@ -1,5 +1,8 @@
 # @haexhub/sdk
 
+[![npm version](https://badge.fury.io/js/@haexhub%2Fsdk.svg)](https://www.npmjs.com/package/@haexhub/sdk)
+[![npm downloads](https://img.shields.io/npm/dm/@haexhub/sdk.svg)](https://www.npmjs.com/package/@haexhub/sdk)
+
 Official SDK for building HaexHub extensions with cryptographic identity and granular permissions.
 
 ## Installation
