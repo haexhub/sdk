@@ -36,22 +36,22 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   // 5. Nutze dein Pub/Sub-Pattern, um auf künftige Updates zu lauschen
   client.subscribe(() => {
     console.log('[Nuxt Plugin] Client context updated:', client.context);
+
+    // Check if setup was completed (setupCompleted is set by client.setupComplete())
+    const isSetupComplete = client.setupCompleted;
+
     // Triggere ein Update für das shallowRef
     state.value = {
-      ...state.value, // Behalte isReady bei
+      ...state.value,
       context: client.context,
+      isSetupComplete,
     };
     console.log('[Nuxt Plugin] State updated:', state.value);
   });
 
-  // 6. Warte auf Setup-Completion (läuft in background, blockiert Plugin nicht)
-  client.setupComplete().then(() => {
-    console.log('[Nuxt Plugin] Setup complete');
-    state.value = {
-      ...state.value,
-      isSetupComplete: true,
-    };
-  });
+  // 6. Note: We DON'T call setupComplete() automatically anymore!
+  // The extension must call it after registering the setup hook.
+  // This prevents race conditions where setupComplete() is called before the hook is registered.
 
   // 7. Stelle den Client und den reaktiven State bereit
   const haexhubPlugin = {

@@ -53,15 +53,14 @@ export function useHaexHub(config: HaexHubConfig = {}) {
       if (context) {
         context.value = clientInstance!.context;
       }
-    });
-
-    // Wait for setup completion
-    clientInstance.setupComplete().then(() => {
-      console.log('[Vue Composable] Setup complete');
       if (isSetupComplete) {
-        isSetupComplete.value = true;
+        isSetupComplete.value = clientInstance!.setupCompleted;
       }
     });
+
+    // Note: We DON'T call setupComplete() automatically anymore!
+    // The extension must call it after registering the setup hook.
+    // This prevents race conditions where setupComplete() is called before the hook is registered.
   }
 
   return {

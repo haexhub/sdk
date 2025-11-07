@@ -53,17 +53,17 @@ export function useHaexHub(config: HaexHubConfig = {}) {
     const unsubscribe = clientInstance!.subscribe(() => {
       setExtensionInfo(clientInstance!.extensionInfo);
       setContext(clientInstance!.context);
+      setIsSetupComplete(clientInstance!.setupCompleted);
     });
 
     // Initial sync in case data loaded before component mounted
     setExtensionInfo(clientInstance!.extensionInfo);
     setContext(clientInstance!.context);
+    setIsSetupComplete(clientInstance!.setupCompleted);
 
-    // Wait for setup completion
-    clientInstance!.setupComplete().then(() => {
-      console.log('[React Hook] Setup complete');
-      setIsSetupComplete(true);
-    });
+    // Note: We DON'T call setupComplete() automatically anymore!
+    // The extension must call it after registering the setup hook.
+    // This prevents race conditions where setupComplete() is called before the hook is registered.
 
     return unsubscribe;
   }, []);

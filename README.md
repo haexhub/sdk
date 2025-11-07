@@ -69,13 +69,111 @@ Without setup hooks, your app might try to query tables before they exist, causi
 ### How to Use
 
 <details>
-<summary><b>Nuxt/Vue</b> - Setup in app.vue</summary>
+<summary><b>Nuxt/Vue</b> - Setup in Pinia Store (Recommended)</summary>
+
+**⚠️ Important for All Framework Users:**
+
+You must register your setup hook **BEFORE** calling `setupComplete()`. The recommended pattern is to register the hook at store/component initialization time, then explicitly call `setupComplete()` to execute it.
+
+**Recommended approach for Nuxt: Register setup hook in a Pinia store:**
+
+```typescript
+// stores/haexhub.ts
+import { defineStore } from 'pinia';
+import * as schema from '~/database/schemas';
+import manifest from '../../haextension/manifest.json';
+
+// Import migration SQL files
+const migrationFiles = import.meta.glob('../database/migrations/*.sql', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+
+export const useHaexHubStore = defineStore('haexhub', () => {
+  const nuxtApp = useNuxtApp();
+  const haexhub = nuxtApp.$haexhub;
+
+  const orm = shallowRef(null);
+
+  // Step 1: Register setup hook FIRST
+  haexhub.client.onSetup(async () => {
+    // Convert migration files to SDK format
+    const migrations = Object.entries(migrationFiles).map(
+      ([path, content]) => {
+        const fileName = path.split('/').pop()?.replace('.sql', '') || '';
+        return { name: fileName, sql: content };
+      }
+    );
+
+    console.log(`Running ${migrations.length} migration(s)`);
+
+    // Run migrations
+    await haexhub.client.runMigrationsAsync(
+      manifest.public_key,
+      manifest.name,
+      migrations
+    );
+  });
+
+  // Step 2: Initialize database and trigger setup
+  const initializeAsync = async () => {
+    orm.value = haexhub.client.initializeDatabase(schema);
+
+    // Step 3: Call setupComplete() to execute the hook
+    await haexhub.client.setupComplete();
+
+    console.log('Database ready');
+  };
+
+  return {
+    client: haexhub.client,
+    state: haexhub.state,
+    orm,
+    initializeAsync,
+  };
+});
+```
+
+Then in your `app.vue`:
+
+```vue
+<!-- app/app.vue -->
+<template>
+  <div v-if="haexhubStore.state.isSetupComplete">
+    <NuxtPage />
+  </div>
+  <div v-else>
+    <p>Initializing extension...</p>
+  </div>
+</template>
+
+<script setup lang="ts">
+const haexhubStore = useHaexHubStore();
+
+onMounted(async () => {
+  await haexhubStore.initializeAsync();
+});
+</script>
+```
+
+**Key Points:**
+
+1. Register the setup hook **immediately** when creating your store/client
+2. Call `setupComplete()` explicitly when you're ready to run the setup
+3. `isSetupComplete` will only become `true` after the hook finishes executing
+4. This ensures migrations complete before any database operations
+
+</details>
+
+<details>
+<summary><b>Vue 3 (Non-Nuxt)</b> - Setup in app.vue</summary>
 
 ```vue
 <!-- app/app.vue -->
 <template>
   <div v-if="isSetupComplete">
-    <NuxtPage />  <!-- or your app content -->
+    <YourApp />
   </div>
   <div v-else>
     <p>Initializing extension...</p>

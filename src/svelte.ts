@@ -52,13 +52,12 @@ export function initHaexHub(config: HaexHubConfig = {}) {
     clientInstance.subscribe(() => {
       extensionInfoStore.set(clientInstance!.extensionInfo);
       contextStore.set(clientInstance!.context);
+      isSetupCompleteStore.set(clientInstance!.setupCompleted);
     });
 
-    // Wait for setup completion
-    clientInstance.setupComplete().then(() => {
-      console.log('[Svelte Store] Setup complete');
-      isSetupCompleteStore.set(true);
-    });
+    // Note: We DON'T call setupComplete() automatically anymore!
+    // The extension must call it after registering the setup hook.
+    // This prevents race conditions where setupComplete() is called before the hook is registered.
   }
 
   return clientInstance;

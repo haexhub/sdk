@@ -48,7 +48,7 @@ export class HaexHubClient {
 
   private setupPromise: Promise<void> | null = null;
   private setupHook: (() => Promise<void>) | null = null;
-  private setupCompleted = false;
+  private _setupCompleted = false;
 
   public orm: SqliteRemoteDatabase<Record<string, unknown>> | null = null;
   public readonly storage: StorageAPI;
@@ -80,6 +80,13 @@ export class HaexHubClient {
    */
   public async ready(): Promise<void> {
     return this.readyPromise;
+  }
+
+  /**
+   * Gibt zurück, ob das Setup bereits abgeschlossen wurde.
+   */
+  public get setupCompleted(): boolean {
+    return this._setupCompleted;
   }
 
   /**
@@ -119,8 +126,11 @@ export class HaexHubClient {
     try {
       this.log('[HaexHub] Running setup hook...');
       await this.setupHook();
-      this.setupCompleted = true;
+      this._setupCompleted = true;
       this.log('[HaexHub] Setup completed successfully');
+
+      // Notify subscribers that setup is complete
+      this.notifySubscribers();
     } catch (error) {
       this.log('[HaexHub] Setup failed:', error);
       throw error;
