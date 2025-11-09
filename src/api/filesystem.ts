@@ -32,6 +32,25 @@ export interface SaveFileResult {
   success: boolean;
 }
 
+export interface OpenFileOptions {
+  /**
+   * The filename for the temporary file
+   */
+  fileName: string;
+
+  /**
+   * Optional MIME type for the file
+   */
+  mimeType?: string;
+}
+
+export interface OpenFileResult {
+  /**
+   * Whether the operation was successful
+   */
+  success: boolean;
+}
+
 export class FilesystemAPI {
   constructor(private client: HaexHubClient) {}
 
@@ -52,6 +71,28 @@ export class FilesystemAPI {
         defaultPath: options.defaultPath,
         title: options.title,
         filters: options.filters,
+      }
+    );
+
+    return result;
+  }
+
+  /**
+   * Opens a file with the system's default viewer
+   * @param data The file data as Uint8Array
+   * @param options Options for opening the file
+   * @returns The result of the operation
+   */
+  async openFileAsync(
+    data: Uint8Array,
+    options: OpenFileOptions
+  ): Promise<OpenFileResult> {
+    const result = await this.client.request<OpenFileResult>(
+      "haextension.fs.openFile",
+      {
+        data: Array.from(data), // Convert Uint8Array to regular array for postMessage
+        fileName: options.fileName,
+        mimeType: options.mimeType,
       }
     );
 
