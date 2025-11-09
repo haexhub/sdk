@@ -51,6 +51,20 @@ export interface OpenFileResult {
   success: boolean;
 }
 
+export interface ShowImageOptions {
+  /**
+   * The data URL of the image (base64 encoded)
+   */
+  dataUrl: string;
+}
+
+export interface ShowImageResult {
+  /**
+   * Whether the operation was successful
+   */
+  success: boolean;
+}
+
 export class FilesystemAPI {
   constructor(private client: HaexHubClient) {}
 
@@ -93,6 +107,26 @@ export class FilesystemAPI {
         data: Array.from(data), // Convert Uint8Array to regular array for postMessage
         fileName: options.fileName,
         mimeType: options.mimeType,
+      }
+    );
+
+    return result;
+  }
+
+  /**
+   * Shows an image using a data URL (safe, read-only viewing)
+   * This is safe to use without special permissions as it only displays images
+   * and doesn't execute any code or open files with external applications
+   * @param options Options containing the data URL
+   * @returns The result of the operation
+   */
+  async showImageAsync(
+    options: ShowImageOptions
+  ): Promise<ShowImageResult> {
+    const result = await this.client.request<ShowImageResult>(
+      "haextension.fs.showImage",
+      {
+        dataUrl: options.dataUrl,
       }
     );
 
