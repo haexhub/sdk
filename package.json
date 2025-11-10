@@ -63,9 +63,9 @@
     "dev": "tsup --watch",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "update:patch": "pnpm build && pnpm version patch",
-    "update:minor": "pnpm build && pnpm version minor",
-    "update:major": "pnpm build && pnpm version major",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major",
     "publishVersion": "pnpm publish --access public"
   },
   "author": "haex",
