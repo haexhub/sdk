@@ -1513,6 +1513,33 @@ pnpm dev
 pnpm link
 ```
 
+## Release Process
+
+Create a new release using the automated scripts:
+
+```bash
+# Patch release (1.2.3 → 1.2.4)
+pnpm release:patch
+
+# Minor release (1.2.3 → 1.3.0)
+pnpm release:minor
+
+# Major release (1.2.3 → 2.0.0)
+pnpm release:major
+```
+
+The script automatically:
+1. Updates version in `package.json`
+2. Creates a git commit
+3. Creates a git tag
+4. Pushes to remote
+
+After the release, publish to npm:
+
+```bash
+pnpm publishVersion
+```
+
 ## License
 
 ISC
