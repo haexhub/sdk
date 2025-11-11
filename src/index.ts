@@ -6,6 +6,7 @@ export { HaexHubClient } from "./client";
 export { DatabaseAPI } from "./api/database";
 export { FilesystemAPI } from "./api/filesystem";
 export { WebAPI } from "./api/web";
+export { PermissionsAPI } from "./api/permissions";
 
 export type {
   HaexHubRequest,
