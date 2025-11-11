@@ -575,11 +575,17 @@ export class HaexHubClient {
         return;
       }
     } catch (error) {
-      // If Tauri commands fail, fall through to iframe mode
-      this.log("Tauri commands not available, falling back to iframe mode");
+      // If Tauri commands fail and we're not in iframe, re-throw the error
+      if (window.self === window.top) {
+        this.log("Tauri commands failed and not in iframe, re-throwing error:", error);
+        throw error;
+      }
+      // Otherwise fall through to iframe mode
+      this.log("Tauri commands not available, falling back to iframe mode", error);
     }
 
     // iframe mode (mobile/web)
+    // At this point we should be in an iframe
     if (window.self === window.top) {
       throw new HaexHubError(ErrorCode.NOT_IN_IFRAME, "errors.not_in_iframe");
     }
