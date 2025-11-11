@@ -78,6 +78,16 @@ export class WebAPI {
     return new Blob([response.body]);
   }
 
+  /**
+   * Opens a URL in the user's default browser
+   * @param url The URL to open
+   */
+  async openAsync(url: string): Promise<void> {
+    await this.client.request<void>("haextension.web.open", {
+      url,
+    });
+  }
+
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
     let binary = '';
