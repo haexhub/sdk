@@ -79,8 +79,17 @@ try {
   execSync(`git push origin v${newVersion}`, { stdio: 'inherit' });
   console.log('✅ Pushed changes and tag');
 
-  console.log('\n🎉 Release v' + newVersion + ' created successfully!');
-  console.log('📋 GitHub Actions will now build and publish the release.');
+  // Build the package
+  console.log('\n🔨 Building package...');
+  execSync('pnpm run build', { stdio: 'inherit' });
+  console.log('✅ Build completed');
+
+  // Publish to npm
+  console.log('\n📦 Publishing to npm...');
+  execSync('pnpm publish --access public --no-git-checks', { stdio: 'inherit' });
+  console.log('✅ Published to npm');
+
+  console.log('\n🎉 Release v' + newVersion + ' created and published successfully!');
 } catch (error) {
   console.error('❌ Git operation failed:', error.message);
   // Rollback package.json changes
