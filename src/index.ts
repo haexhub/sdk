@@ -5,6 +5,7 @@ import './polyfills';
 export { HaexHubClient } from "./client";
 export { DatabaseAPI } from "./api/database";
 export { FilesystemAPI } from "./api/filesystem";
+export { WebAPI } from "./api/web";
 
 export type {
   HaexHubRequest,
@@ -26,6 +27,8 @@ export type {
   SearchResult,
   ContextChangedEvent,
   SearchRequestEvent,
+  WebRequestOptions,
+  WebResponse,
 } from "./types";
 
 export {

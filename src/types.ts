@@ -160,6 +160,22 @@ export interface HaexHubConfig {
   manifest?: ExtensionManifest;
 }
 
+// Web/Fetch Types
+export interface WebRequestOptions {
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
+  headers?: Record<string, string>;
+  body?: string | ArrayBuffer | Blob;
+  timeout?: number;
+}
+
+export interface WebResponse {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  body: ArrayBuffer;
+  url: string;
+}
+
 // Error Codes
 export enum ErrorCode {
   // Connection Errors
@@ -184,6 +200,7 @@ export enum ErrorCode {
   METHOD_NOT_FOUND = "METHOD_NOT_FOUND",
   INTERNAL_ERROR = "INTERNAL_ERROR",
   DATABASE_ERROR = "DATABASE_ERROR",
+  WEB_ERROR = "WEB_ERROR",
 }
 
 export class HaexHubError extends Error {
