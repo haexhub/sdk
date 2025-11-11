@@ -465,13 +465,13 @@ export class HaexHubClient {
       case "haextension.db.query":
         return invoke<T>("webview_extension_db_query", {
           query: params.query as string,
-          params: params.params as unknown[],
+          params: (params.params as unknown[]) || [],
         });
 
       case "haextension.db.execute":
         return invoke<T>("webview_extension_db_execute", {
           query: params.query as string,
-          params: params.params as unknown[],
+          params: (params.params as unknown[]) || [],
         });
 
       case "permissions.web.check":

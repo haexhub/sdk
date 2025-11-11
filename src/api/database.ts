@@ -9,7 +9,7 @@ export class DatabaseAPI {
       "haextension.db.query",
       {
         query,
-        params,
+        params: params || [],
       }
     );
 
@@ -30,7 +30,7 @@ export class DatabaseAPI {
   ): Promise<DatabaseQueryResult> {
     return this.client.request<DatabaseQueryResult>("haextension.db.execute", {
       query,
-      params,
+      params: params || [],
     });
   }
 
