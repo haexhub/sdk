@@ -499,6 +499,20 @@ export class HaexHubClient {
           body: params.body as string | undefined,
         });
 
+      case "haextension.fs.saveFile":
+        return invoke<T>("webview_extension_fs_save_file", {
+          data: params.data as number[],
+          defaultPath: params.defaultPath as string | undefined,
+          title: params.title as string | undefined,
+          filters: params.filters as Array<{ name: string; extensions: string[] }> | undefined,
+        });
+
+      case "haextension.fs.openFile":
+        return invoke<T>("webview_extension_fs_open_file", {
+          data: params.data as number[],
+          fileName: params.fileName as string,
+        });
+
       default:
         throw new HaexHubError(
           ErrorCode.METHOD_NOT_FOUND,
