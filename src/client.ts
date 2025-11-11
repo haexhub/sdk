@@ -45,6 +45,7 @@ export class HaexHubClient {
   private _extensionInfo: ExtensionInfo | null = null;
   private _context: ApplicationContext | null = null;
   private reactiveSubscribers: Set<() => void> = new Set();
+  private isNativeWindow = false;
 
   private readyPromise: Promise<void>;
   private resolveReady!: () => void; // Wird im Konstruktor initialisiert
@@ -394,6 +395,19 @@ export class HaexHubClient {
     method: string,
     params: Record<string, unknown> = {}
   ): Promise<T> {
+    // Native window mode: Use Tauri invoke() for direct backend communication
+    if (this.isNativeWindow && typeof (window as any).__TAURI__ !== 'undefined') {
+      return this.invoke<T>(method, params);
+    }
+
+    // iframe mode: Use postMessage for communication through parent window
+    return this.postMessage<T>(method, params);
+  }
+
+  private async postMessage<T>(
+    method: string,
+    params: Record<string, unknown>
+  ): Promise<T> {
     const requestId = this.generateRequestId();
 
     const request: HaexHubRequest = {
@@ -431,6 +445,69 @@ export class HaexHubClient {
     });
   }
 
+  private async invoke<T>(
+    method: string,
+    params: Record<string, unknown>
+  ): Promise<T> {
+    const { invoke } = (window as any).__TAURI__.core as {
+      invoke: <R>(cmd: string, args?: Record<string, unknown>) => Promise<R>;
+    };
+
+    if (this.config.debug) {
+      console.log("[SDK Debug] ========== Invoke Request ==========");
+      console.log("[SDK Debug] Method:", method);
+      console.log("[SDK Debug] Params:", params);
+      console.log("[SDK Debug] =======================================");
+    }
+
+    // Map SDK methods to Tauri commands
+    switch (method) {
+      case "haextension.db.query":
+        return invoke<T>("webview_extension_db_query", {
+          query: params.query as string,
+          params: params.params as unknown[],
+        });
+
+      case "haextension.db.execute":
+        return invoke<T>("webview_extension_db_execute", {
+          query: params.query as string,
+          params: params.params as unknown[],
+        });
+
+      case "permissions.web.check":
+        return invoke<T>("webview_extension_check_web_permission", {
+          url: params.url as string,
+        });
+
+      case "permissions.database.check":
+        return invoke<T>("webview_extension_check_database_permission", {
+          resource: params.resource as string,
+          operation: params.operation as string,
+        });
+
+      case "permissions.filesystem.check":
+        return invoke<T>("webview_extension_check_filesystem_permission", {
+          path: params.path as string,
+          actionStr: params.action as string,
+        });
+
+      case "haextension.web.fetch":
+        return invoke<T>("webview_extension_web_request", {
+          url: params.url as string,
+          method: params.method as string | undefined,
+          headers: params.headers as Record<string, string> | undefined,
+          body: params.body as string | undefined,
+        });
+
+      default:
+        throw new HaexHubError(
+          ErrorCode.METHOD_NOT_FOUND,
+          "errors.method_not_found",
+          { method }
+        );
+    }
+  }
+
   public on(eventType: string, callback: EventCallback): void {
     if (!this.eventListeners.has(eventType)) {
       this.eventListeners.set(eventType, new Set());
@@ -461,6 +538,48 @@ export class HaexHubClient {
   private async init(): Promise<void> {
     if (this.initialized) return;
 
+    // Try to detect if we're running in a native WebViewWindow (Tauri)
+    // by attempting to call the Tauri-specific commands
+    try {
+      if (typeof (window as any).__TAURI__ !== 'undefined') {
+        const { invoke } = (window as any).__TAURI__.core as {
+          invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
+        };
+
+        // Try to get extension info from Tauri backend
+        this._extensionInfo = await invoke<ExtensionInfo>("webview_extension_get_info");
+        this._context = await invoke<ApplicationContext>("webview_extension_context_get");
+
+        this.isNativeWindow = true;
+        this.initialized = true;
+
+        this.log("HaexHub SDK initialized in native WebViewWindow mode");
+        this.log("Extension info:", this._extensionInfo);
+        this.log("Application context:", this._context);
+
+        this.notifySubscribers();
+
+        this.emitEvent({
+          type: "extension.info.loaded",
+          data: { info: this._extensionInfo },
+          timestamp: Date.now(),
+        });
+
+        this.emitEvent({
+          type: "context.loaded",
+          data: { context: this._context },
+          timestamp: Date.now(),
+        });
+
+        this.resolveReady();
+        return;
+      }
+    } catch (error) {
+      // If Tauri commands fail, fall through to iframe mode
+      this.log("Tauri commands not available, falling back to iframe mode");
+    }
+
+    // iframe mode (mobile/web)
     if (window.self === window.top) {
       throw new HaexHubError(ErrorCode.NOT_IN_IFRAME, "errors.not_in_iframe");
     }
@@ -468,8 +587,9 @@ export class HaexHubClient {
     this.messageHandler = this.handleMessage.bind(this);
     window.addEventListener("message", this.messageHandler);
 
+    this.isNativeWindow = false;
     this.initialized = true;
-    this.log("HaexHub SDK initialized");
+    this.log("HaexHub SDK initialized in iframe mode");
 
     try {
       // Load extension info from manifest (if provided in config)
@@ -501,10 +621,10 @@ export class HaexHubClient {
         timestamp: Date.now(),
       });
 
-      // +++ NEU: Signalisiert, dass der Client bereit ist +++
       this.resolveReady();
     } catch (error) {
       this.log("Failed to load extension info or context:", error);
+      throw error;
     }
   }
 
