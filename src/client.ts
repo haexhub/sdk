@@ -631,9 +631,20 @@ export class HaexHubClient {
       }
 
       // Debug: Check window.parent availability
-      console.log("[SDK] window.parent exists:", !!window.parent);
-      console.log("[SDK] window.parent === window:", window.parent === window);
-      console.log("[SDK] window.self === window.top:", window.self === window.top);
+      // Use alert on mobile to bypass console forwarding
+      if (typeof window !== 'undefined' && window.parent) {
+        const debugInfo = `SDK Debug:\nwindow.parent exists: ${!!window.parent}\nwindow.parent === window: ${window.parent === window}\nwindow.self === window.top: ${window.self === window.top}`;
+        try {
+          // Try to send debug info via postMessage
+          window.parent.postMessage({
+            type: 'haexhub:debug',
+            data: debugInfo
+          }, '*');
+        } catch (e) {
+          // Fallback to alert
+          alert(debugInfo + `\npostMessage error: ${e}`);
+        }
+      }
 
       // Request context from HaexHub - this also acts as a handshake
       this._context = await this.request<ApplicationContext>("haextension.context.get");
