@@ -552,50 +552,51 @@ export class HaexHubClient {
   private async init(): Promise<void> {
     if (this.initialized) return;
 
+    // IMPORTANT: Check iframe mode FIRST before attempting Tauri calls
+    // This prevents hanging on Android where __TAURI__ exists but sandboxed iframes can't access it
+    const isInIframe = window.self !== window.top;
+
     // Try to detect if we're running in a native WebViewWindow (Tauri)
-    // by attempting to call the Tauri-specific commands
-    try {
-      if (typeof (window as any).__TAURI__ !== 'undefined') {
-        const { invoke } = (window as any).__TAURI__.core as {
-          invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
-        };
+    // Only attempt this if we're NOT in an iframe
+    if (!isInIframe) {
+      try {
+        if (typeof (window as any).__TAURI__ !== 'undefined') {
+          const { invoke } = (window as any).__TAURI__.core as {
+            invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
+          };
 
-        // Try to get extension info from Tauri backend
-        this._extensionInfo = await invoke<ExtensionInfo>("webview_extension_get_info");
-        this._context = await invoke<ApplicationContext>("webview_extension_context_get");
+          // Try to get extension info from Tauri backend
+          this._extensionInfo = await invoke<ExtensionInfo>("webview_extension_get_info");
+          this._context = await invoke<ApplicationContext>("webview_extension_context_get");
 
-        this.isNativeWindow = true;
-        this.initialized = true;
+          this.isNativeWindow = true;
+          this.initialized = true;
 
-        this.log("HaexHub SDK initialized in native WebViewWindow mode");
-        this.log("Extension info:", this._extensionInfo);
-        this.log("Application context:", this._context);
+          this.log("HaexHub SDK initialized in native WebViewWindow mode");
+          this.log("Extension info:", this._extensionInfo);
+          this.log("Application context:", this._context);
 
-        this.notifySubscribers();
+          this.notifySubscribers();
 
-        this.emitEvent({
-          type: "extension.info.loaded",
-          data: { info: this._extensionInfo },
-          timestamp: Date.now(),
-        });
+          this.emitEvent({
+            type: "extension.info.loaded",
+            data: { info: this._extensionInfo },
+            timestamp: Date.now(),
+          });
 
-        this.emitEvent({
-          type: "context.loaded",
-          data: { context: this._context },
-          timestamp: Date.now(),
-        });
+          this.emitEvent({
+            type: "context.loaded",
+            data: { context: this._context },
+            timestamp: Date.now(),
+          });
 
-        this.resolveReady();
-        return;
+          this.resolveReady();
+          return;
+        }
+      } catch (error) {
+        this.log("Tauri commands failed, falling back to iframe mode", error);
+        // Fall through to iframe mode
       }
-    } catch (error) {
-      // If Tauri commands fail and we're not in iframe, re-throw the error
-      if (window.self === window.top) {
-        this.log("Tauri commands failed and not in iframe, re-throwing error:", error);
-        throw error;
-      }
-      // Otherwise fall through to iframe mode
-      this.log("Tauri commands not available, falling back to iframe mode", error);
     }
 
     // iframe mode (mobile/web)
