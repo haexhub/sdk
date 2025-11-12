@@ -149,7 +149,21 @@ export type EventCallback = (event: HaexHubEvent) => void;
 export interface ExtensionManifest {
   name: string;
   version: string;
+  author?: string | null;
+  entry?: string | null;
+  icon?: string | null;
   public_key: string;
+  signature: string;
+  permissions: {
+    database?: any[];
+    filesystem?: any[];
+    http?: any[];
+    shell?: any[];
+  };
+  homepage?: string | null;
+  description?: string | null;
+  single_instance?: boolean | null;
+  display_mode?: "auto" | "window" | "iframe" | null;
 }
 
 // Config Types

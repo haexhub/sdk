@@ -67,7 +67,21 @@ export default defineNuxtModule<ModuleOptions>({
       manifest = {
         name: parsed.name,
         version: parsed.version,
+        author: parsed.author ?? null,
+        entry: parsed.entry ?? null,
+        icon: parsed.icon ?? null,
         public_key: parsed.public_key,
+        signature: parsed.signature || "",
+        permissions: parsed.permissions || {
+          database: [],
+          filesystem: [],
+          http: [],
+          shell: [],
+        },
+        homepage: parsed.homepage ?? null,
+        description: parsed.description ?? null,
+        single_instance: parsed.single_instance ?? null,
+        display_mode: parsed.display_mode ?? null,
       };
       console.log(`✓ [@haexhub/sdk] Loaded ${manifestPath}`);
     } catch (error) {
