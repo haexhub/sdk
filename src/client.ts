@@ -169,15 +169,6 @@ export class HaexHubClient {
         params: unknown[],
         method: "get" | "run" | "all" | "values"
       ) => {
-        // COMPREHENSIVE DEBUG LOGGING
-        console.log('[SDK Proxy] ========================================');
-        console.log('[SDK Proxy] Called with:');
-        console.log('[SDK Proxy]   method:', method);
-        console.log('[SDK Proxy]   sql:', sql);
-        console.log('[SDK Proxy]   params:', JSON.stringify(params, null, 2));
-        console.log('[SDK Proxy]   params types:', params.map(p => typeof p));
-        console.log('[SDK Proxy] ========================================');
-
         try {
           // Drizzle uses different methods:
           // - "run": INSERT/UPDATE/DELETE without RETURNING
@@ -185,11 +176,12 @@ export class HaexHubClient {
           // - "get": SELECT with LIMIT 1
           // - "values": SELECT returning raw values
           //
-          // The backend (haextension.db.execute) is smart enough to detect RETURNING
-          // and return rows when present. So we use it for both "run" and "all".
+          // The backend intelligently handles routing:
+          // - method="run" and "all" go to haextension.db.execute
+          // - Backend detects SELECT statements and delegates to haextension.db.query
+          // - Backend returns rows when RETURNING clause is present
 
           if (method === "run" || method === "all") {
-            console.log('[SDK Proxy] Using haextension.db.execute (method=' + method + ')');
             const result = await this.request<DatabaseQueryResult>(
               "haextension.db.execute",
               {
@@ -198,52 +190,34 @@ export class HaexHubClient {
               }
             );
 
-            console.log('[SDK Proxy] Backend result:', JSON.stringify(result, null, 2));
-
-            // For method="all", return rows (RETURNING clause or regular SELECT)
-            // Backend will return rows if RETURNING is present
+            // For method="all", return rows (RETURNING clause or SELECT delegated by backend)
             if (method === "all") {
-              console.log('[SDK Proxy] Returning rows for method=all');
               return { rows: result.rows || [] };
             }
 
             // For method="run", check if we have rows (RETURNING clause)
             if (result.rows && Array.isArray(result.rows) && result.rows.length > 0) {
-              console.log('[SDK Proxy] Found rows in result, returning them');
               return { rows: result.rows };
             }
 
-            console.log('[SDK Proxy] No rows found, returning result as-is');
             return result;
           }
 
           // Read operations (SELECT without RETURNING)
-          console.log('[SDK Proxy] Using haextension.db.query (read operation)');
           const result = await this.request<DatabaseQueryResult>("haextension.db.query", {
             query: sql,
             params: params as unknown[],
           });
 
-          console.log('[SDK Proxy] Backend result:', JSON.stringify(result, null, 2));
-
           const rows = result.rows as any[];
 
           if (method === "get") {
-            const returnValue = rows.length > 0 ? rows.at(0) : undefined;
-            console.log('[SDK Proxy] Returning single row (get):', returnValue);
-            return { rows: returnValue };
+            return { rows: rows.length > 0 ? rows.at(0) : undefined };
           }
 
-          console.log('[SDK Proxy] Returning all rows');
           return { rows };
         } catch (error) {
-          console.error('[SDK Proxy] ========================================');
-          console.error('[SDK Proxy] ERROR occurred!');
-          console.error('[SDK Proxy]   sql:', sql);
-          console.error('[SDK Proxy]   params:', JSON.stringify(params, null, 2));
-          console.error('[SDK Proxy]   error:', error);
-          console.error('[SDK Proxy] ========================================');
-          this.log("Drizzle proxy error:", error);
+          this.log("Database operation failed:", error);
           throw error;
         }
       },
