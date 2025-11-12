@@ -5,6 +5,7 @@ import * as fsSync from "fs";
 import * as path from "path";
 import archiver from "archiver";
 import { getExtensionDir } from "~/config";
+import { readManifest } from "~/manifest";
 
 export const EXTENSION_FILE_EXTENSION = ".xt";
 
@@ -113,7 +114,18 @@ export class ExtensionSigner {
     const extensionDir = getExtensionDir();
     const manifestPath = path.join(extensionDir, "manifest.json");
     const originalManifestContent = await fs.readFile(manifestPath, "utf-8");
-    const manifest = JSON.parse(originalManifestContent);
+
+    // Read manifest with version fallback to package.json
+    const manifestObject = readManifest({
+      rootDir: process.cwd(),
+      extensionDir,
+    });
+
+    if (!manifestObject) {
+      throw new Error("Failed to read manifest.json");
+    }
+
+    const manifest = manifestObject as any; // Cast to any for manipulation
 
     // 1. Private Key importieren und Public Key ableiten
     const privateKeyBuffer = Buffer.from(privateKeyHex, "hex");
