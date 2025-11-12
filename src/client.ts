@@ -179,8 +179,17 @@ export class HaexHubClient {
         console.log('[SDK Proxy] ========================================');
 
         try {
-          if (method === "run") {
-            console.log('[SDK Proxy] Using haextension.db.execute');
+          // Drizzle uses different methods:
+          // - "run": INSERT/UPDATE/DELETE without RETURNING
+          // - "all": INSERT/UPDATE/DELETE with RETURNING, or SELECT
+          // - "get": SELECT with LIMIT 1
+          // - "values": SELECT returning raw values
+          //
+          // The backend (haextension.db.execute) is smart enough to detect RETURNING
+          // and return rows when present. So we use it for both "run" and "all".
+
+          if (method === "run" || method === "all") {
+            console.log('[SDK Proxy] Using haextension.db.execute (method=' + method + ')');
             const result = await this.request<DatabaseQueryResult>(
               "haextension.db.execute",
               {
@@ -191,8 +200,14 @@ export class HaexHubClient {
 
             console.log('[SDK Proxy] Backend result:', JSON.stringify(result, null, 2));
 
-            // IMPORTANT: If the SQL contains RETURNING clause, the backend returns rows
-            // We need to return them in the correct format for Drizzle
+            // For method="all", return rows (RETURNING clause or regular SELECT)
+            // Backend will return rows if RETURNING is present
+            if (method === "all") {
+              console.log('[SDK Proxy] Returning rows for method=all');
+              return { rows: result.rows || [] };
+            }
+
+            // For method="run", check if we have rows (RETURNING clause)
             if (result.rows && Array.isArray(result.rows) && result.rows.length > 0) {
               console.log('[SDK Proxy] Found rows in result, returning them');
               return { rows: result.rows };
@@ -202,7 +217,8 @@ export class HaexHubClient {
             return result;
           }
 
-          console.log('[SDK Proxy] Using haextension.db.query');
+          // Read operations (SELECT without RETURNING)
+          console.log('[SDK Proxy] Using haextension.db.query (read operation)');
           const result = await this.request<DatabaseQueryResult>("haextension.db.query", {
             query: sql,
             params: params as unknown[],
