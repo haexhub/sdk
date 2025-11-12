@@ -169,8 +169,18 @@ export class HaexHubClient {
         params: unknown[],
         method: "get" | "run" | "all" | "values"
       ) => {
+        // COMPREHENSIVE DEBUG LOGGING
+        console.log('[SDK Proxy] ========================================');
+        console.log('[SDK Proxy] Called with:');
+        console.log('[SDK Proxy]   method:', method);
+        console.log('[SDK Proxy]   sql:', sql);
+        console.log('[SDK Proxy]   params:', JSON.stringify(params, null, 2));
+        console.log('[SDK Proxy]   params types:', params.map(p => typeof p));
+        console.log('[SDK Proxy] ========================================');
+
         try {
           if (method === "run") {
+            console.log('[SDK Proxy] Using haextension.db.execute');
             const result = await this.request<DatabaseQueryResult>(
               "haextension.db.execute",
               {
@@ -179,29 +189,44 @@ export class HaexHubClient {
               }
             );
 
+            console.log('[SDK Proxy] Backend result:', JSON.stringify(result, null, 2));
+
             // IMPORTANT: If the SQL contains RETURNING clause, the backend returns rows
             // We need to return them in the correct format for Drizzle
             if (result.rows && Array.isArray(result.rows) && result.rows.length > 0) {
+              console.log('[SDK Proxy] Found rows in result, returning them');
               return { rows: result.rows };
             }
 
+            console.log('[SDK Proxy] No rows found, returning result as-is');
             return result;
           }
 
+          console.log('[SDK Proxy] Using haextension.db.query');
           const result = await this.request<DatabaseQueryResult>("haextension.db.query", {
             query: sql,
             params: params as unknown[],
           });
 
+          console.log('[SDK Proxy] Backend result:', JSON.stringify(result, null, 2));
+
           const rows = result.rows as any[];
 
           if (method === "get") {
             const returnValue = rows.length > 0 ? rows.at(0) : undefined;
+            console.log('[SDK Proxy] Returning single row (get):', returnValue);
             return { rows: returnValue };
           }
 
+          console.log('[SDK Proxy] Returning all rows');
           return { rows };
         } catch (error) {
+          console.error('[SDK Proxy] ========================================');
+          console.error('[SDK Proxy] ERROR occurred!');
+          console.error('[SDK Proxy]   sql:', sql);
+          console.error('[SDK Proxy]   params:', JSON.stringify(params, null, 2));
+          console.error('[SDK Proxy]   error:', error);
+          console.error('[SDK Proxy] ========================================');
           this.log("Drizzle proxy error:", error);
           throw error;
         }
