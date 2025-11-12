@@ -178,6 +178,13 @@ export class HaexHubClient {
                 params: params as unknown[],
               }
             );
+
+            // IMPORTANT: If the SQL contains RETURNING clause, the backend returns rows
+            // We need to return them in the correct format for Drizzle
+            if (result.rows && Array.isArray(result.rows) && result.rows.length > 0) {
+              return { rows: result.rows };
+            }
+
             return result;
           }
 
