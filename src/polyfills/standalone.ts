@@ -8,6 +8,7 @@ import {
 } from './localStorage'
 import { installCookiePolyfill } from './cookies'
 import { installHistoryPolyfill } from './history'
+import { installDebugDiagnostics } from './debug'
 
 /**
  * Get the standalone polyfill code as a string
@@ -37,6 +38,9 @@ export function getPolyfillCode(): string {
   // Note: Base tag is injected at build-time by Vite plugin, not at runtime
 
   console.log('[HaexHub] All polyfills loaded successfully');
+
+  // Debug diagnostics for Android debugging
+  (${installDebugDiagnostics.toString()})();
 })();`
 
   return iife

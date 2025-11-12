@@ -22,12 +22,14 @@
 import { installLocalStoragePolyfill, installSessionStoragePolyfill } from './localStorage';
 import { installCookiePolyfill } from './cookies';
 import { installHistoryPolyfill } from './history';
+import { installDebugDiagnostics } from './debug';
 
 export { installLocalStoragePolyfill, installSessionStoragePolyfill } from './localStorage';
 export { installCookiePolyfill } from './cookies';
 export { installHistoryPolyfill } from './history';
 export { installBaseTag } from './baseTag'; // Export for backwards compatibility, but not used in auto-install
 export { installConsoleForwarding } from './consoleForwarding';
+export { installDebugDiagnostics } from './debug';
 
 /**
  * Install all HaexHub polyfills
@@ -58,21 +60,8 @@ export function installPolyfills(): void {
 
   console.log('[HaexHub] All polyfills loaded successfully');
 
-  // Debug: Test window.parent availability (for Android debugging)
-  // IMPORTANT: NO try-catch to see if it throws an error!
-  const hasParent = window.parent && window.parent !== window;
-  console.log('[HaexHub] hasParent:', hasParent);
-
-  if (hasParent) {
-    console.log('[HaexHub] Attempting to send debug message to parent...');
-    window.parent.postMessage({
-      type: 'haexhub:debug',
-      data: `[Polyfills] window.parent test: exists=${!!window.parent}, different=${hasParent}, selfIsTop=${window.self === window.top}`
-    }, '*');
-    console.log('[HaexHub] Debug message sent!');
-  } else {
-    console.log('[HaexHub] No parent window or parent === window');
-  }
+  // Run debug diagnostics
+  installDebugDiagnostics();
 }
 
 // Auto-install polyfills when this module is imported
