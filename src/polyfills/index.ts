@@ -57,6 +57,22 @@ export function installPolyfills(): void {
   // Note: Console forwarding is installed by HaexHubClient when debug mode is enabled
 
   console.log('[HaexHub] All polyfills loaded successfully');
+
+  // Debug: Test window.parent availability (for Android debugging)
+  try {
+    const hasParent = window.parent && window.parent !== window;
+    const debugMsg = {
+      type: 'haexhub:debug',
+      data: `[Polyfills] window.parent exists: ${!!window.parent}, is different: ${hasParent}, self===top: ${window.self === window.top}`
+    };
+    if (hasParent) {
+      window.parent.postMessage(debugMsg, '*');
+    } else {
+      console.log('[HaexHub] No parent window or parent === self');
+    }
+  } catch (e) {
+    console.log('[HaexHub] postMessage to parent failed:', e);
+  }
 }
 
 // Auto-install polyfills when this module is imported
