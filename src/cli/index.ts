@@ -78,6 +78,8 @@ program
           shell: [],
         },
         homepage: packageJson.homepage || null,
+        single_instance: false,
+        display_mode: "auto",
       };
 
       await fs.writeFile(
