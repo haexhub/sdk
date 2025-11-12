@@ -59,25 +59,19 @@ export function installPolyfills(): void {
   console.log('[HaexHub] All polyfills loaded successfully');
 
   // Debug: Test window.parent availability (for Android debugging)
-  // Use postMessage directly to survive Vite minification
-  try {
-    const hasParent = window.parent && window.parent !== window;
-    if (hasParent) {
-      window.parent.postMessage({
-        type: 'haexhub:debug',
-        data: `[Polyfills] window.parent test: exists=${!!window.parent}, different=${hasParent}, selfIsTop=${window.self === window.top}`
-      }, '*');
-    } else {
-      // Try to send even if no parent for debugging
-      if (window.parent) {
-        window.parent.postMessage({
-          type: 'haexhub:debug',
-          data: `[Polyfills] window.parent === window (not in iframe)`
-        }, '*');
-      }
-    }
-  } catch (e) {
-    // Silently fail - can't debug without console
+  // IMPORTANT: NO try-catch to see if it throws an error!
+  const hasParent = window.parent && window.parent !== window;
+  console.log('[HaexHub] hasParent:', hasParent);
+
+  if (hasParent) {
+    console.log('[HaexHub] Attempting to send debug message to parent...');
+    window.parent.postMessage({
+      type: 'haexhub:debug',
+      data: `[Polyfills] window.parent test: exists=${!!window.parent}, different=${hasParent}, selfIsTop=${window.self === window.top}`
+    }, '*');
+    console.log('[HaexHub] Debug message sent!');
+  } else {
+    console.log('[HaexHub] No parent window or parent === window');
   }
 }
 
