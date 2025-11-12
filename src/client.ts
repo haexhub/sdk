@@ -630,6 +630,11 @@ export class HaexHubClient {
         });
       }
 
+      // Debug: Check window.parent availability
+      console.log("[SDK] window.parent exists:", !!window.parent);
+      console.log("[SDK] window.parent === window:", window.parent === window);
+      console.log("[SDK] window.self === window.top:", window.self === window.top);
+
       // Request context from HaexHub - this also acts as a handshake
       this._context = await this.request<ApplicationContext>("haextension.context.get");
       this.log("Application context received:", this._context);
