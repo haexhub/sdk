@@ -1,6 +1,6 @@
 {
   "name": "@haexhub/sdk",
-  "version": "1.6.5",
+  "version": "1.6.6",
   "description": "SDK for building HaexHub extensions",
   "repository": {
     "type": "git",
