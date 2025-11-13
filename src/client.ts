@@ -513,6 +513,11 @@ export class HaexHubClient {
           actionStr: params.action as string,
         });
 
+      case "haextension.web.open":
+        return invoke<T>("webview_extension_web_open", {
+          url: params.url as string,
+        });
+
       case "haextension.web.fetch":
         return invoke<T>("webview_extension_web_request", {
           url: params.url as string,

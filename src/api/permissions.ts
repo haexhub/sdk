@@ -26,16 +26,15 @@ export class PermissionsAPI {
 
   /**
    * Checks if the extension has permission for a web request
-   * @param url The URL or domain to check (e.g., "https://example.com" or "example.com")
-   * @param method The HTTP method (e.g., "GET", "POST", etc.). Defaults to "GET"
+   * @param url The URL to check (e.g., "https://example.com/path")
    * @returns Promise<boolean> indicating if permission is granted
+   * @note Method/operation is not checked - permissions apply to all HTTP methods
    */
-  async checkWebAsync(url: string, method: string = "GET"): Promise<boolean> {
+  async checkWebAsync(url: string): Promise<boolean> {
     const response = await this.client.request<PermissionResponse>(
       "permissions.web.check",
       {
         url,
-        method,
       }
     );
     return response.status === "granted";
