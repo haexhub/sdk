@@ -43,6 +43,9 @@ export { HaexHubError } from "./types";
 // Export event constants
 export { HAEXTENSION_EVENTS, type HaextensionEvent } from './events';
 
+// Export method constants
+export { HAEXTENSION_METHODS, type HaextensionMethod } from './methods';
+
 // Export polyfill utilities for manual control if needed
 export {
   installPolyfills,

@@ -1,5 +1,6 @@
 import type { HaexHubClient } from "../client";
 import type { WebRequestOptions, WebResponse } from "../types";
+import { HAEXTENSION_METHODS } from "../methods";
 
 export class WebAPI {
   constructor(private client: HaexHubClient) {}
@@ -30,7 +31,7 @@ export class WebAPI {
       headers: Record<string, string>;
       body: string; // Base64 encoded
       url: string;
-    }>("haextension.web.fetch", {
+    }>(HAEXTENSION_METHODS.web.fetch, {
       url,
       method: options.method || "GET",
       headers: options.headers,
@@ -83,7 +84,8 @@ export class WebAPI {
    * @param url The URL to open
    */
   async openAsync(url: string): Promise<void> {
-    await this.client.request<void>("haextension.web.open", {
+    await this.client.request<void>(HAEXTENSION_METHODS.application.open, {
+      application: "browser",
       url,
     });
   }

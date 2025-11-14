@@ -1,4 +1,5 @@
 import { HAEXTENSION_EVENTS } from './events';
+import { HAEXTENSION_METHODS } from './methods';
 import type {
   HaexHubRequest,
   HaexHubResponse,
@@ -184,7 +185,7 @@ export class HaexHubClient {
 
           if (method === "run" || method === "all") {
             const result = await this.request<DatabaseQueryResult>(
-              "haextension.db.execute",
+              HAEXTENSION_METHODS.database.execute,
               {
                 query: sql,
                 params: params as unknown[],
@@ -205,7 +206,7 @@ export class HaexHubClient {
           }
 
           // Read operations (SELECT without RETURNING)
-          const result = await this.request<DatabaseQueryResult>("haextension.db.query", {
+          const result = await this.request<DatabaseQueryResult>(HAEXTENSION_METHODS.database.query, {
             query: sql,
             params: params as unknown[],
           });
@@ -324,7 +325,7 @@ export class HaexHubClient {
     params: unknown[] = []
   ): Promise<T[]> {
     const result = await this.request<DatabaseQueryResult>(
-      "haextension.db.query",
+      HAEXTENSION_METHODS.database.query,
       { query: sql, params }
     );
     if (this.config.debug) {
@@ -352,7 +353,7 @@ export class HaexHubClient {
     params: unknown[] = []
   ): Promise<{ rowsAffected: number; lastInsertId?: number }> {
     const result = await this.request<DatabaseQueryResult>(
-      "haextension.db.execute",
+      HAEXTENSION_METHODS.database.execute,
       { query: sql, params }
     );
     return {
@@ -485,13 +486,13 @@ export class HaexHubClient {
 
     // Map SDK methods to Tauri commands
     switch (method) {
-      case "haextension.db.query":
+      case HAEXTENSION_METHODS.database.query:
         return invoke<T>("webview_extension_db_query", {
           query: params.query as string,
           params: (params.params as unknown[]) || [],
         });
 
-      case "haextension.db.execute":
+      case HAEXTENSION_METHODS.database.execute:
         return invoke<T>("webview_extension_db_execute", {
           query: params.query as string,
           params: (params.params as unknown[]) || [],
@@ -514,12 +515,12 @@ export class HaexHubClient {
           actionStr: params.action as string,
         });
 
-      case "haextension.web.open":
+      case HAEXTENSION_METHODS.application.open:
         return invoke<T>("webview_extension_web_open", {
           url: params.url as string,
         });
 
-      case "haextension.web.fetch":
+      case HAEXTENSION_METHODS.web.fetch:
         return invoke<T>("webview_extension_web_request", {
           url: params.url as string,
           method: params.method as string | undefined,
@@ -527,7 +528,7 @@ export class HaexHubClient {
           body: params.body as string | undefined,
         });
 
-      case "haextension.fs.saveFile":
+      case HAEXTENSION_METHODS.filesystem.saveFile:
         return invoke<T>("webview_extension_fs_save_file", {
           data: params.data as number[],
           defaultPath: params.defaultPath as string | undefined,
@@ -535,7 +536,7 @@ export class HaexHubClient {
           filters: params.filters as Array<{ name: string; extensions: string[] }> | undefined,
         });
 
-      case "haextension.fs.openFile":
+      case HAEXTENSION_METHODS.filesystem.openFile:
         return invoke<T>("webview_extension_fs_open_file", {
           data: params.data as number[],
           fileName: params.fileName as string,
@@ -677,7 +678,7 @@ export class HaexHubClient {
       }
 
       // Request context from HaexHub - this also acts as a handshake
-      this._context = await this.request<ApplicationContext>("haextension.context.get");
+      this._context = await this.request<ApplicationContext>(HAEXTENSION_METHODS.context.get);
       this.log("Application context received:", this._context);
       this.notifySubscribers();
 

@@ -1,4 +1,5 @@
 import type { HaexHubClient } from "../client";
+import { HAEXTENSION_METHODS } from "../methods";
 
 export interface SaveFileOptions {
   /**
@@ -79,7 +80,7 @@ export class FilesystemAPI {
     options: SaveFileOptions = {}
   ): Promise<SaveFileResult | null> {
     const result = await this.client.request<SaveFileResult | null>(
-      "haextension.fs.saveFile",
+      HAEXTENSION_METHODS.filesystem.saveFile,
       {
         data: Array.from(data), // Convert Uint8Array to regular array for postMessage
         defaultPath: options.defaultPath,
@@ -102,7 +103,7 @@ export class FilesystemAPI {
     options: OpenFileOptions
   ): Promise<OpenFileResult> {
     const result = await this.client.request<OpenFileResult>(
-      "haextension.fs.openFile",
+      HAEXTENSION_METHODS.filesystem.openFile,
       {
         data: Array.from(data), // Convert Uint8Array to regular array for postMessage
         fileName: options.fileName,
@@ -124,7 +125,7 @@ export class FilesystemAPI {
     options: ShowImageOptions
   ): Promise<ShowImageResult> {
     const result = await this.client.request<ShowImageResult>(
-      "haextension.fs.showImage",
+      HAEXTENSION_METHODS.filesystem.showImage,
       {
         dataUrl: options.dataUrl,
       }

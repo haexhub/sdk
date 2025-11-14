@@ -1,12 +1,13 @@
 import type { HaexHubClient } from "../client";
 import type { DatabaseQueryResult, DatabaseTableInfo } from "../types";
+import { HAEXTENSION_METHODS } from "../methods";
 
 export class DatabaseAPI {
   constructor(private client: HaexHubClient) {}
 
   async query<T>(query: string, params?: unknown[]): Promise<T[]> {
     const result = await this.client.request<DatabaseQueryResult>(
-      "haextension.db.query",
+      HAEXTENSION_METHODS.database.query,
       {
         query,
         params: params || [],
@@ -28,14 +29,14 @@ export class DatabaseAPI {
     query: string,
     params?: unknown[]
   ): Promise<DatabaseQueryResult> {
-    return this.client.request<DatabaseQueryResult>("haextension.db.execute", {
+    return this.client.request<DatabaseQueryResult>(HAEXTENSION_METHODS.database.execute, {
       query,
       params: params || [],
     });
   }
 
   async transaction(statements: string[]): Promise<void> {
-    await this.client.request("haextension.db.transaction", {
+    await this.client.request(HAEXTENSION_METHODS.database.transaction, {
       statements,
     });
   }
