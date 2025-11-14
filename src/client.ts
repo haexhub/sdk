@@ -617,6 +617,25 @@ export class HaexHubClient {
             timestamp: Date.now(),
           });
 
+          // Listen for context changes via Tauri events
+          const { listen } = (window as any).__TAURI__.event as {
+            listen: (event: string, handler: (event: any) => void) => Promise<() => void>;
+          };
+
+          listen("haextension.context.changed", (event: any) => {
+            this.log("Received context change event:", event);
+            if (event.payload?.context) {
+              this._context = event.payload.context;
+              this.handleEvent({
+                type: "haextension.context.changed",
+                data: { context: this._context },
+                timestamp: Date.now(),
+              });
+            }
+          }).catch((error) => {
+            this.log("Failed to setup context change listener:", error);
+          });
+
           this.resolveReady();
           return;
         }
