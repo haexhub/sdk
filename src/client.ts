@@ -613,16 +613,23 @@ export class HaexHubClient {
           };
 
           listen(HAEXTENSION_EVENTS.CONTEXT_CHANGED, (event: any) => {
+            console.log("[HaexHub SDK] Received Tauri event:", HAEXTENSION_EVENTS.CONTEXT_CHANGED, event);
             this.log("Received context change event:", event);
             if (event.payload?.context) {
               this._context = event.payload.context;
+              console.log("[HaexHub SDK] Updated context to:", this._context);
               this.handleEvent({
                 type: HAEXTENSION_EVENTS.CONTEXT_CHANGED,
                 data: { context: this._context },
                 timestamp: Date.now(),
               });
+            } else {
+              console.warn("[HaexHub SDK] Event received but no context in payload:", event);
             }
+          }).then(() => {
+            console.log("[HaexHub SDK] Context change listener registered successfully");
           }).catch((error) => {
+            console.error("[HaexHub SDK] Failed to setup context change listener:", error);
             this.log("Failed to setup context change listener:", error);
           });
 
