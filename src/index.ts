@@ -56,12 +56,8 @@ export {
   installBaseTag,
 } from './polyfills';
 
-// Export config utilities
-export {
-  readHaextensionConfig,
-  getExtensionDir,
-  type HaextensionConfig,
-} from './config';
+// Export config type only (utilities are Node.js-only and exported separately)
+export type { HaextensionConfig } from './config';
 
 import { HaexHubClient } from "./client";
 import type { HaexHubConfig } from "./types";
