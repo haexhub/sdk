@@ -1,3 +1,4 @@
+import { HAEXTENSION_EVENTS } from './events';
 import type {
   HaexHubRequest,
   HaexHubResponse,
@@ -605,29 +606,17 @@ export class HaexHubClient {
 
           this.notifySubscribers();
 
-          this.emitEvent({
-            type: "extension.info.loaded",
-            data: { info: this._extensionInfo },
-            timestamp: Date.now(),
-          });
-
-          this.emitEvent({
-            type: "context.loaded",
-            data: { context: this._context },
-            timestamp: Date.now(),
-          });
-
           // Listen for context changes via Tauri events
           const { listen } = (window as any).__TAURI__.event as {
             listen: (event: string, handler: (event: any) => void) => Promise<() => void>;
           };
 
-          listen("haextension.context.changed", (event: any) => {
+          listen(HAEXTENSION_EVENTS.CONTEXT_CHANGED, (event: any) => {
             this.log("Received context change event:", event);
             if (event.payload?.context) {
               this._context = event.payload.context;
               this.handleEvent({
-                type: "haextension.context.changed",
+                type: HAEXTENSION_EVENTS.CONTEXT_CHANGED,
                 data: { context: this._context },
                 timestamp: Date.now(),
               });
@@ -669,12 +658,6 @@ export class HaexHubClient {
         };
         this.log("Extension info loaded from manifest:", this._extensionInfo);
         this.notifySubscribers();
-
-        this.emitEvent({
-          type: "extension.info.loaded",
-          data: { info: this._extensionInfo },
-          timestamp: Date.now(),
-        });
       }
 
       // Debug: Check window.parent availability
@@ -697,12 +680,6 @@ export class HaexHubClient {
       this._context = await this.request<ApplicationContext>("haextension.context.get");
       this.log("Application context received:", this._context);
       this.notifySubscribers();
-
-      this.emitEvent({
-        type: "context.loaded",
-        data: { context: this._context },
-        timestamp: Date.now(),
-      });
 
       this.resolveReady();
     } catch (error) {
@@ -785,7 +762,7 @@ export class HaexHubClient {
   }
 
   private handleEvent(event: HaexHubEvent): void {
-    if (event.type === "haextension.context.changed") {
+    if (event.type === HAEXTENSION_EVENTS.CONTEXT_CHANGED) {
       const contextEvent = event as ContextChangedEvent;
       this._context = contextEvent.data.context;
       this.log("Context updated:", this._context);

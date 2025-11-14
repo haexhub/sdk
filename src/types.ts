@@ -1,3 +1,5 @@
+import { HAEXTENSION_EVENTS } from './events';
+
 // Constants
 export const DEFAULT_TIMEOUT = 30000; // 30 seconds in milliseconds
 export const TABLE_SEPARATOR = "__"; // Separator for table name components: {publicKey}__{extensionName}__{tableName}
@@ -129,14 +131,14 @@ export interface HaexHubEvent {
 
 // Specific Event Types
 export interface ContextChangedEvent extends HaexHubEvent {
-  type: "context.changed";
+  type: typeof HAEXTENSION_EVENTS.CONTEXT_CHANGED;
   data: {
     context: ApplicationContext;
   };
 }
 
 export interface SearchRequestEvent extends HaexHubEvent {
-  type: "search.request";
+  type: typeof HAEXTENSION_EVENTS.SEARCH_REQUEST;
   data: {
     query: SearchQuery;
     requestId: string;
